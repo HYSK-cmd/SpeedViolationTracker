@@ -6,6 +6,7 @@ SAVE_PATH:
 
 REAL_DIST_M: 8
 SPEED_LIMIT: 60.0
+
 # resolution
 resolution: [1280, 720]
 
@@ -26,7 +27,7 @@ colors:
   LINE_COLOR: [0, 0, 0] # black
   BOX_COLOR: [0, 255, 0] # green
   TEXT_COLOR: [255, 0, 0] # blue
-  CENTER_COLOR: [0, 0, 255] # pink
+  CENTER_COLOR: [0, 0, 255] # red
   OVERLAY_COLOR: [144, 238, 144] # light green
 
 # logs

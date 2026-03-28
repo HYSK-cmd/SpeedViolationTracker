@@ -31,6 +31,7 @@ class Video_Dets:
         self.line_color = config["colors"]["LINE_COLOR"]
         self.text_color = config["colors"]["TEXT_COLOR"]
         self.box_color = config["colors"]["BOX_COLOR"]
+        self.center_color = config["colors"]["CENTER_COLOR"]
         self.overlay_color = config["colors"]["OVERLAY_COLOR"]
 
         # memory
@@ -115,7 +116,7 @@ class Video_Dets:
 
                 # find the center of detected object
                 cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                cv2.circle(frame, (cx, cy), 3, self.line_color, -1)
+                cv2.circle(frame, (cx, cy), 2, self.center_color, -1)
 
                 # initialize track entry
                 if track_id not in self.track_memory and conf >= self.conf_threshold:
