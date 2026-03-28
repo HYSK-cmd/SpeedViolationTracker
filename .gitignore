@@ -4,3 +4,5 @@ Project 1 - Car Counter/
 .DS_Store
 *.pyc
 __pycache__/
+Yolo-Models/
+*.pt
