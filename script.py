@@ -1,6 +1,6 @@
+import os
 import argparse
-import torch
-from ultralytics import YOLO
+from src.utils import get_first_frame, filter_image
 from config.loader import load_settings
 from src.detection_for_video import Video_Dets
 
@@ -35,13 +35,14 @@ if __name__ == "__main__":
     print(f"Source: {args.source}, Source_Path: {args.source_path} Model: {args.model}")
     config = load_settings()
     print(f"Settings: {config}")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device Use: {"GPU" if device.type == "cuda" else "CPU"}")
-    print(device)
 
     match args.source:
         case "video":
-            video = Video_Dets(vid_path=args.source_path, model=args.model, device=device, config=config)
+            first_frame = get_first_frame(os.path.join("assets/videos", args.source_path))
+            filtered_image = filter_image(first_frame)
+            #filter_image(args.source_path)
+            exit(0)
+            video = Video_Dets(vid_path=args.source_path, model=args.model, config=config)
             video.detect()
         case "livestream":
             pass

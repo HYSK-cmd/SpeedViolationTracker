@@ -1,16 +1,14 @@
 import cv2
 import math
-import torch
 import os
 import copy
 import logging
 from ultralytics import YOLO
 
 class Video_Dets:
-    def __init__(self, vid_path, model, device, config):
+    def __init__(self, vid_path, model, config):
         self.video = os.path.join("assets/videos", vid_path)
         self.model = YOLO(os.path.join('../Yolo-Models', model))
-        self.device = device
 
         # configs
         self.line_y1 = config["lines"]["line_A"][1]
