@@ -8,7 +8,7 @@ from ultralytics import YOLO
 
 class Video_Dets:
     def __init__(self, vid_path, model, device, config):
-        self.video = os.path.join("videos", vid_path)
+        self.video = os.path.join("assets/videos", vid_path)
         self.model = YOLO(os.path.join('../Yolo-Models', model))
         self.device = device
 
@@ -20,11 +20,12 @@ class Video_Dets:
         self.line_B = [y for y in config["lines"]["line_B"]]
 
         self.conf_threshold = config["conf_threshold"]
+        self.iou_threshold = config["iou_threshold"]
         self.real_dist_m = config["REAL_DIST_M"]
         self.speed_limit = config["SPEED_LIMIT"]
 
         self.frame_id = 0
-        self.cnt = 0
+        self.alpha = config["alpha"]
 
         # colors
         self.line_color = config["colors"]["LINE_COLOR"]
@@ -49,8 +50,6 @@ class Video_Dets:
         mask
         line
         '''
-        # fill detected objects
-        # alpha = self.config["alpha"]
 
         # start video detection
         while True:
@@ -60,15 +59,24 @@ class Video_Dets:
                 logging.info("Video ended")
                 break
 
-            results = self.model.track(frame, persist=True, verbose=False)[0]
+            # model inference
+            results = self.model.track(
+                frame,
+                persist=True,
+                verbose=False,
+                conf=self.conf_threshold,
+                iou=self.iou_threshold,
+            )[0]
+
             # persist=True keeps detected objects' id consistent across frames
             # verbose=False disables console logs for every frame
 
+            # draw lines
+            # line A
             cv2.line(frame, (self.line_A[0], self.line_A[1]), (self.line_A[2], self.line_A[3]), self.line_color, 2)
-            # cv2.putText(frame, "Line A", (self.line_A[0], self.line_y1-12),
-            #             cv2.FONT_HERSHEY_PLAIN, 3, self.config["colors"]["LINE_COLOR"], 2)
             cv2.putText(frame, "Line A", (self.line_A[0], self.line_y1 - 12),
                         cv2.FONT_HERSHEY_PLAIN, 1, self.text_color, 2)
+            # line B
             cv2.line(frame, (self.line_B[0], self.line_B[1]), (self.line_B[2], self.line_B[3]), self.line_color, 2)
             cv2.putText(frame, "Line B", (self.line_B[0], self.line_y2-12),
                         cv2.FONT_HERSHEY_PLAIN, 1, self.text_color, 2)
@@ -90,7 +98,7 @@ class Video_Dets:
                 # fill detected objects with color
                 overlay = frame.copy()
                 cv2.rectangle(overlay, (x1, y1), (x2, y2), self.box_color, -1)
-
+                cv2.addWeighted(overlay, self.alpha, frame, 1-self.alpha, 0, frame)
 
                 # confidence
                 conf = math.ceil(box.conf[0] * 100) / 100
@@ -111,6 +119,7 @@ class Video_Dets:
                         "cross_line": None,
                     }
 
+                # detected car must have an initialized track entry
                 if track_id in self.track_memory:
                     cross_line = self.track_memory[track_id]["cross_line"]
 
@@ -137,7 +146,7 @@ class Video_Dets:
                                     if track_id not in self.speed_violators:
                                         str_speed = f"{speed:.1f} km/h"
                                         self.speed_violators[track_id] = str_speed
-                                        logging.warning(f"id={track_id} is speeding at {str_speed}")
+                                        logging.warning(f"id={track_id} is speeding at {str_speed:.1f}")
                                 logging.info(f"id={track_id}, frame_A={self.track_memory[track_id]["A"]}, frame_B={self.track_memory[track_id]["B"]}, cross_line={cross_line}, speed={speed:.1f} km/h")
                     # update cross_line
                     self.track_memory[track_id]["cross_line"] = cy
@@ -147,7 +156,8 @@ class Video_Dets:
                 if track_id in self.track_memory:
                     car_speed = self.track_memory[track_id]["speed"]
                     if car_speed is not None:
-                        str_speed = f"{car_speed}km/h"
+                        str_speed = f"{car_speed:.1f}km/h"
+                        # normal speed are colored in white and exceeded speed are colored in red
                         if track_id not in self.speed_violators:
                             cv2.putText(frame, str_speed, (x1, y1 - 10), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 3)
                         else:
@@ -159,6 +169,6 @@ class Video_Dets:
                 logging.info("Program paused")
                 break
 
-        print(self.speed_violators)
+        print(self.speed_violators) # list of speed violators
         cap.release()
         cv2.destroyAllWindows()

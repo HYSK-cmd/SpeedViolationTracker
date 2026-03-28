@@ -1,23 +1,25 @@
 # SETTINGS
 
 SAVE_PATH:
-  - "images/"
   - "videos/"
   - "livestreams/"
 
-REAL_DIST_M: 2
+REAL_DIST_M: 8
 SPEED_LIMIT: 80.0
 # resolution
-resolution: (1280, 720)
+resolution: [1280, 720]
 
 # detected objects
 alpha: 0.3
-conf_threshold: 0.3
+conf_threshold: 0.5
+iou_threshold: 0.5
 
 # lines
 lines:
-  line_A: [400, 297, 673, 297]
-  line_B: [245, 350, 700, 350]
+  #line_A: [400, 297, 673, 297]
+  #line_B: [245, 350, 700, 350]
+  line_A: [344, 324, 800, 324]
+  line_B: [300, 381, 850, 381]
 
 # colors
 colors:
@@ -26,5 +28,6 @@ colors:
   TEXT_COLOR: [255, 0, 0] # blue
   CENTER_COLOR: [0, 0, 255] # pink
   OVERLAY_COLOR: [144, 238, 144] # light green
+
 # logs
 log_file: "logs/info.log"
