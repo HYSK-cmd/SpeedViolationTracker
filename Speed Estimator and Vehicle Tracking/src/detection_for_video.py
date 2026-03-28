@@ -39,6 +39,7 @@ class Video_Dets:
 
         # logs
         logging.basicConfig(level=logging.INFO, filename=os.path.abspath(config["log_file"]))
+        self.save_speeding_cars = os.path.abspath(config["save_speeding_cars_path"])
 
     def detect(self):
         cap = cv2.VideoCapture(self.video)
@@ -54,10 +55,10 @@ class Video_Dets:
         # start video detection
         while True:
             ret, frame = cap.read()
-            self.frame_id += 1
             if not ret:
                 logging.info("Video ended")
                 break
+            self.frame_id += 1
 
             # model inference
             results = self.model.track(
@@ -70,6 +71,9 @@ class Video_Dets:
 
             # persist=True keeps detected objects' id consistent across frames
             # verbose=False disables console logs for every frame
+
+            # copy the original frame for speeding cars
+            copied_frame = copy.deepcopy(frame)
 
             # draw lines
             # line A
@@ -103,6 +107,9 @@ class Video_Dets:
                 # confidence
                 conf = math.ceil(box.conf[0] * 100) / 100
 
+                # display classname and confidence value
+                cv2.putText(frame, f"{self.model.names[cls]}: {conf}", (x1, y1 - 40), cv2.FONT_HERSHEY_PLAIN, 2,(255, 255, 255), 3)
+
                 # attach id to each detected object
                 track_id = int(box.id[0])
 
@@ -117,7 +124,14 @@ class Video_Dets:
                         "B": None,
                         "speed": None,
                         "cross_line": None,
+                        "classification": {}
                     }
+
+                # majority voting for stable class prediction per track
+                classname = self.model.names[cls]
+                candidates = self.track_memory[track_id]["classification"]
+                candidates[classname] = candidates.get(classname, 0) + 1
+                most_predicted_class = max(candidates, key=candidates.get)
 
                 # detected car must have an initialized track entry
                 if track_id in self.track_memory:
@@ -141,13 +155,18 @@ class Video_Dets:
                             if t > 0:
                                 speed = (self.real_dist_m / t) * 3.6
                                 self.track_memory[track_id]["speed"] = speed
-                                # check if a detected car is violating the speed constraint
+                                # check if a detected car is speeding
                                 if speed > self.speed_limit:
                                     if track_id not in self.speed_violators:
                                         str_speed = f"{speed:.1f} km/h"
                                         self.speed_violators[track_id] = str_speed
-                                        logging.warning(f"id={track_id} is speeding at {str_speed:.1f}")
+                                        logging.warning(f"id={track_id} is speeding at {str_speed}")
+                                        # save the photo of the speeding car
+                                        filename = f"id_{track_id}_{most_predicted_class}.jpg"
+                                        resize_image = cv2.resize(copied_frame[y1:y2, x1:x2], (640, 480))
+                                        cv2.imwrite(os.path.join(self.save_speeding_cars, filename), resize_image)
                                 logging.info(f"id={track_id}, frame_A={self.track_memory[track_id]["A"]}, frame_B={self.track_memory[track_id]["B"]}, cross_line={cross_line}, speed={speed:.1f} km/h")
+
                     # update cross_line
                     self.track_memory[track_id]["cross_line"] = cy
 
@@ -165,7 +184,7 @@ class Video_Dets:
 
             cv2.imshow("Video", frame)
             # press ESC to stop the video
-            if cv2.waitKey(0) & 0xFF == 27:
+            if cv2.waitKey(1) & 0xFF == 27:
                 logging.info("Program paused")
                 break
 

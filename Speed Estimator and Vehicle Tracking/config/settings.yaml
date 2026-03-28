@@ -5,7 +5,7 @@ SAVE_PATH:
   - "livestreams/"
 
 REAL_DIST_M: 8
-SPEED_LIMIT: 80.0
+SPEED_LIMIT: 60.0
 # resolution
 resolution: [1280, 720]
 
@@ -31,3 +31,4 @@ colors:
 
 # logs
 log_file: "logs/info.log"
+save_speeding_cars_path: "logs/speeding_cars"
