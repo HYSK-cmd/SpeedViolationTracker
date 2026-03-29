@@ -1,6 +1,6 @@
 import os
 import argparse
-from src.utils import get_first_frame, filter_image
+from src.utils import get_first_frame, Polygon
 from config.loader import load_settings
 from src.detection_for_video import Video_Dets
 
@@ -39,8 +39,8 @@ if __name__ == "__main__":
     match args.source:
         case "video":
             first_frame = get_first_frame(os.path.join("assets/videos", args.source_path))
-            filtered_image = filter_image(first_frame)
-            #filter_image(args.source_path)
+            polygon = Polygon(first_frame)
+            masked_image = polygon.get_masked_image()
             exit(0)
             video = Video_Dets(vid_path=args.source_path, model=args.model, config=config)
             video.detect()

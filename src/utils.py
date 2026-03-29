@@ -1,96 +1,127 @@
 import os, cv2
 import numpy as np
 
-def get_first_frame(path:str) -> np.ndarray:
+def get_first_frame(path):
     cap = cv2.VideoCapture(path)
     _, frame = cap.read()
+    if frame is None:
+        raise FileNotFoundError("Image not found")
+    frame = cv2.resize(frame, (1280, 720))
     return frame
 
-# GaussianBlur
-# BGR → HSV
-# inRange()로 특정 색만 마스크
-# Canny
-# HoughLinesP
-def nothing(x):
-    pass
-def filter_image(img:np.ndarray) -> np.ndarray:
-    #img = cv2.imread(os.path.join("assets/videos/cars02.jpg"))
-    if img is not None:
-        # resize if not matched
-        img = cv2.resize(img, (1280, 720))
+class Polygon:
+    def __init__(self, image: np.ndarray):
+        # display window
+        self.original = image.copy()
+        self.display = image.copy()
+        self.points = []
+        self.isClosed = False
+        self.margin = 5
 
-        # use Gaussian Blur
-        blur = cv2.GaussianBlur(img, (3, 3), 7)
+        # manual window
+        self.bg_image = np.full((720, 500, 3), (255, 255, 255), dtype=np.uint8)
+        self.adjust = 0
 
-        # convert to HSV colorspace
-        # more intuitive and less sensitive to lighting variations
-        # img_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
-        cv2.namedWindow("Trackbars")
-        cv2.createTrackbar("H Min", "Trackbars", 82, 179, nothing)
-        cv2.createTrackbar("H Max", "Trackbars", 179, 179, nothing)
-        cv2.createTrackbar("S Min", "Trackbars", 0, 255, nothing)
-        cv2.createTrackbar("S Max", "Trackbars", 80, 255, nothing)
-        cv2.createTrackbar("V Min", "Trackbars", 40, 255, nothing)
-        cv2.createTrackbar("V Max", "Trackbars", 210, 255, nothing)
+    def get_masked_image(self):
+        # create cv2 window
+        cv2.namedWindow("draw a polygon")
+        cv2.namedWindow("manual")
+        cv2.resizeWindow("draw a polygon", 1280, 720)
+        cv2.resizeWindow("manual", 500, 720)
+        cv2.setMouseCallback("draw a polygon", self.mouse_callback, self)
+        self.draw_polygon()
 
         while True:
-
-            # get current pos of the trackbars
-            h_min = cv2.getTrackbarPos("H Min", "Trackbars")
-            h_max = cv2.getTrackbarPos("H Max", "Trackbars")
-            s_min = cv2.getTrackbarPos("S Min", "Trackbars")
-            s_max = cv2.getTrackbarPos("S Max", "Trackbars")
-            v_min = cv2.getTrackbarPos("V Min", "Trackbars")
-            v_max = cv2.getTrackbarPos("V Max", "Trackbars")
-            # define lower and upper bound for HSV
-            lower = np.array([h_min, s_min, v_min])
-            upper = np.array([h_max, s_max, v_max])
-
-            # HSV mask
-            mask = cv2.inRange(hsv, lower, upper)
-
-            # morphology to remove noise
-            # create a kernel for morphological operation
-            kernel = np.ones((7, 7), np.uint8)
-            # fill small holes and connect neighboring white regions
-            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-            # remove all white noise from the mask
-            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-
-            # find only the outermost contours in the mask
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            # empty mask for the final road region
-            road_mask = np.zeros_like(mask)
-
-            if contours:
-                # keep the largest region as road candidate
-                largest = max(contours, key=cv2.contourArea)
-
-                if cv2.contourArea(largest) > 5000:
-                    # Approximate the contour with at most 5 vertices
-                    peri = cv2.arcLength(largest, True)
-                    polygon = largest
-                    for scale in np.arange(0.005, 0.2, 0.005):
-                        epsilon = scale * peri
-                        approx = cv2.approxPolyDP(largest, epsilon, True)
-
-                        if len(approx) <= 5:
-                            polygon = approx
-                            break
-
-                    # Draw the polygon
-                    cv2.drawContours(img, [polygon], -1, (0, 255, 0), 3)
-
-            # extract only road region
-            road_only = cv2.bitwise_and(img, img, mask=road_mask)
-
-            cv2.imshow("Original", img)
-            cv2.imshow("Road Only", road_only)
-
-            key = cv2.waitKey(1)
-            if key == 27:  # ESC
+            cv2.imshow("draw a polygon", self.display)
+            cv2.imshow("manual", self.bg_image)
+            option = cv2.waitKey(1) & 0xFF
+            # reset
+            if option == ord('r'):
+                self.reset()
+            # save the masked image
+            elif option == ord('s'):
+                # fewer vertices checking
+                if len(self.points) < 3:
+                    cv2.putText(self.display, "You must draw a polygon!",
+                                (200, 360), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
+                    cv2.imshow("draw a polygon", self.display)
+                    # wait for one sec
+                    cv2.waitKey(1000)
+                    self.reset()
+                # overlap checking
+                elif not self.overlap() or self.isClosed:
+                    cv2.putText(self.display, "The polygon is not closed!",
+                                (200, 360), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0),5)
+                    cv2.imshow("draw a polygon", self.display)
+                    # wait for one sec
+                    cv2.waitKey(1000)
+                    self.reset()
+                else:
+                    # create a fully black background
+                    mask = np.zeros(self.original.shape[:2], dtype=np.uint8)
+                    # create an array of selected vertices
+                    vertices = np.array(self.points, dtype=np.int32)
+                    # fill polygon in white
+                    cv2.fillPoly(mask, [vertices], (255, 255, 255))
+                    # keep only the polygon area from the original image
+                    masked_image = cv2.bitwise_and(self.original, self.original, mask=mask)
+                    cv2.imshow("masked_image", masked_image)
+            # quit
+            elif option == ord('q') or option == 27:
                 break
-
         cv2.destroyAllWindows()
+
+    def draw_polygon(self):
+        # re-copy the original frame
+        self.display = self.original.copy()
+        # reset vertical offset for coordinate text rendering
+        self.adjust = 0
+        cv2.putText(self.bg_image, "r: reset, d: done, s: save,",
+                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0),2)
+        cv2.putText(self.bg_image, "q or esc: quit,",
+                    (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        self.adjust += 50
+        # draw dots
+        for p in self.points:
+            cv2.circle(self.display, p, 5, (0, 0, 0), -1)
+            cv2.putText(self.bg_image, f"{p[0], p[1]}",
+                    (10, self.adjust+70), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), 2)
+            self.adjust += 40
+
+        # create a line between dots
+        if len(self.points) > 1:
+            for i in range(len(self.points)-1):
+                cv2.line(self.display, self.points[i], self.points[i+1], (0, 0, 255), 3)
+        # connect the first and last dots if polygon is closed
+        if len(self.points) > 2 and self.isClosed:
+            cv2.line(self.display, self.points[-1], self.points[0], (0, 0, 255), 3)
+
+    # check the overlapping for the first and last dots
+    def overlap(self):
+        x1, y1 = self.points[0]
+        x2, y2 = self.points[-1]
+        if abs(x1 - x2) > self.margin or abs(y1 - y2) > self.margin:
+            return False
+        return True
+
+    # reset operation
+    def reset(self):
+        self.points = []
+        self.isClosed = False
+        self.bg_image = np.full((720, 500, 3), (255, 255, 255), dtype=np.uint8)
+        self.draw_polygon()
+
+
+    # mouse event handler
+    @staticmethod
+    def mouse_callback(event, pt1, pt2, flags, param):
+        self = param
+        # left click to store coordinates
+        if event == cv2.EVENT_LBUTTONDOWN and not self.isClosed:
+            self.points.append((pt1, pt2))
+            self.draw_polygon()
+        # right click to finish shaping a polygon
+        elif event == cv2.EVENT_RBUTTONDOWN and not self.isClosed:
+            self.isClosed = True
+
 
