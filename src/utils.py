@@ -19,10 +19,16 @@ class Polygon:
         self.margin = 5
 
         # manual window
-        self.bg_image = np.full((720, 500, 3), (255, 255, 255), dtype=np.uint8)
+        self.bg_image = np.full((720, 600, 3), (255, 255, 255), dtype=np.uint8)
         self.adjust = 0
 
-    def get_masked_image(self):
+        # white background image for final image
+        self.final_image = np.full((720, 1280, 3), (255, 255, 255), dtype=np.uint8)
+
+        # return image
+        self.roi_image = None
+
+    def get_roi_image(self):
         # create cv2 window
         cv2.namedWindow("draw a polygon")
         cv2.namedWindow("manual")
@@ -49,37 +55,51 @@ class Polygon:
                     cv2.waitKey(1000)
                     self.reset()
                 # overlap checking
-                elif not self.overlap() or self.isClosed:
+                elif not self.overlap():
                     cv2.putText(self.display, "The polygon is not closed!",
                                 (200, 360), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0),5)
+                    cv2.imshow("draw a polygon", self.display)
+                    cv2.waitKey(1000)
+                    self.reset()
+                # when d is not pressed
+                elif not self.isClosed:
+                    cv2.putText(self.display, "Press d when finished!",
+                                (200, 360), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
                     cv2.imshow("draw a polygon", self.display)
                     # wait for one sec
                     cv2.waitKey(1000)
                     self.reset()
-                else:
+                elif self.isClosed:
                     # create a fully black background
                     mask = np.zeros(self.original.shape[:2], dtype=np.uint8)
                     # create an array of selected vertices
                     vertices = np.array(self.points, dtype=np.int32)
                     # fill polygon in white
                     cv2.fillPoly(mask, [vertices], (255, 255, 255))
-                    # keep only the polygon area from the original image
+                    # keep only the polygon area from the white background image
                     masked_image = cv2.bitwise_and(self.original, self.original, mask=mask)
                     cv2.imshow("masked_image", masked_image)
+                    # extract roi
+                    self.roi_image = cv2.bitwise_and(self.final_image, self.final_image, mask=mask)
+                    cv2.imshow("roi_image", self.roi_image)
             # quit
             elif option == ord('q') or option == 27:
                 break
+
         cv2.destroyAllWindows()
+        if self.roi_image is None:
+            raise RuntimeError("No roi image")
+        return self.roi_image
 
     def draw_polygon(self):
         # re-copy the original frame
         self.display = self.original.copy()
         # reset vertical offset for coordinate text rendering
         self.adjust = 0
-        cv2.putText(self.bg_image, "r: reset, d: done, s: save,",
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0),2)
-        cv2.putText(self.bg_image, "q or esc: quit,",
-                    (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(self.bg_image, "l_click: point, r_click: done",
+                    (10, 30), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0),2)
+        cv2.putText(self.bg_image, "r: reset, s: save, q or esc: quit",
+                    (10, 70), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 2)
         self.adjust += 50
         # draw dots
         for p in self.points:
@@ -108,12 +128,11 @@ class Polygon:
     def reset(self):
         self.points = []
         self.isClosed = False
-        self.bg_image = np.full((720, 500, 3), (255, 255, 255), dtype=np.uint8)
+        self.bg_image = np.full((720, 600, 3), (255, 255, 255), dtype=np.uint8)
         self.draw_polygon()
 
-
-    # mouse event handler
     @staticmethod
+    # mouse event handler
     def mouse_callback(event, pt1, pt2, flags, param):
         self = param
         # left click to store coordinates

@@ -40,7 +40,8 @@ if __name__ == "__main__":
         case "video":
             first_frame = get_first_frame(os.path.join("assets/videos", args.source_path))
             polygon = Polygon(first_frame)
-            masked_image = polygon.get_masked_image()
+            roi_image = polygon.get_roi_image()
+            print(roi_image.shape)
             exit(0)
             video = Video_Dets(vid_path=args.source_path, model=args.model, config=config)
             video.detect()
