@@ -10,7 +10,8 @@
           _, buffer = cv2.imencode('.jpg', frame)
           yield (b'--frame\r\n'
                  b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-
+            A = time.time()
+            end = B - time.time() -> time_s distance_m -> 오로지 이미지만으로 측정하거나 
   @app.route('/video_feed')
   def video_feed():
       return Response(generate_frames(),

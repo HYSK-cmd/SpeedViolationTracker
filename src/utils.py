@@ -1,7 +1,7 @@
 import os, cv2
 import numpy as np
 
-def get_first_frame(path):
+def get_first_frame(path:str) -> np.ndarray:
     cap = cv2.VideoCapture(path)
     _, frame = cap.read()
     if frame is None:
