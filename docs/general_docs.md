@@ -10,6 +10,7 @@
     - find a way to measure the real distance between detection lines
     - learn OCR to capture speeding cars' plate number
     - learn FastAPI and React.js to create a backend server for launching a UI web
+    - add more photos and videos to verify the logical coherence
     - test with different YOLO models
 
 ## Hardware
