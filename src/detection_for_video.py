@@ -3,10 +3,23 @@ import math
 import os
 import copy
 import logging
+import numpy as np
+import supervision as sv
 from ultralytics import YOLO
 
-class Video_Dets:
-    def __init__(self, vid_path, model, config):
+class ViewTransformer:
+    def __init__(self, source: np.ndarray, target: np.ndarray):
+        source = source.astype(np.float32)
+        target = target.astype(np.float32)
+        self.mat = cv2.getPerspectiveTransform(source, target)
+
+    def transform_points(self, points: np.ndarray) -> np.ndarray:
+        reshaped_points = points.reshape(-1, 1, 2).astype(np.float32)
+        transformed_points = cv2.perspectiveTransform(reshaped_points, self.mat)
+        return transformed_points.reshape(-1, 2)
+
+class VideoDetection:
+    def __init__(self, vid_path, model, roi, config):
         self.video = os.path.join("assets/videos", vid_path)
         self.model = YOLO(os.path.join('../Yolo-Models', model))
 
@@ -24,6 +37,23 @@ class Video_Dets:
 
         self.frame_id = 0
         self.alpha = config["alpha"]
+
+        # extract the defined dataclass
+        self.roi_image = roi.roi_image
+        self.mask = cv2.cvtColor(self.roi_image, cv2.COLOR_BGR2GRAY)
+
+        # convert source_roi to numpy array
+        self.source = np.array(roi.xyxy)
+
+        # create a target matrix
+        self.t_w = config["TARGET_WIDTH"]
+        self.t_h = config["TARGET_HEIGHT"]
+        self.target = np.array([
+            [0, 0],
+            [self.t_w-1, 0],
+            [self.t_w-1, self.t_h-1],
+            [0, self.t_h-1]
+        ])
 
         # colors
         self.line_color = config["colors"]["LINE_COLOR"]
@@ -46,22 +76,23 @@ class Video_Dets:
         print("FPS:", fps)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
         '''
-        mask
         line
         '''
-
         # start video detection
         while True:
             ret, frame = cap.read()
             if not ret:
                 logging.info("Video ended")
                 break
+            frame = cv2.resize(frame, (1280, 720))
             self.frame_id += 1
+            image_region = cv2.bitwise_and(frame, frame, mask=self.mask)
 
             # model inference
             results = self.model.track(
-                frame,
+                image_region,
                 persist=True,
                 verbose=False,
                 conf=self.conf_threshold,
@@ -183,7 +214,7 @@ class Video_Dets:
 
             cv2.imshow("Video", frame)
             # press ESC to stop the video
-            if cv2.waitKey(1) & 0xFF == 27:
+            if cv2.waitKey(24) & 0xFF == 27:
                 logging.info("Program paused")
                 break
 

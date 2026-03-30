@@ -2,7 +2,7 @@ import os
 import argparse
 from src.utils import get_first_frame, Polygon
 from config.loader import load_settings
-from src.detection_for_video import Video_Dets
+from src.detection_for_video import VideoDetection
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -23,7 +23,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        choices=["yolov8n.pt", "yolov8l.pt"],
+        choices=["yolov8n.pt", "yolov8l.pt", "yolo26n.pt"],
         required=True,
         help="Path to the YOLOv8 model",
         type=str,
@@ -40,10 +40,9 @@ if __name__ == "__main__":
         case "video":
             first_frame = get_first_frame(os.path.join("assets/videos", args.source_path))
             polygon = Polygon(first_frame)
-            roi_image = polygon.get_roi_image()
-            print(roi_image.shape)
-            exit(0)
-            video = Video_Dets(vid_path=args.source_path, model=args.model, config=config)
+            roi = polygon.get_masked_roi_image()
+            print(roi)
+            video = VideoDetection(vid_path=args.source_path, model=args.model, roi=roi, config=config)
             video.detect()
         case "livestream":
             pass
