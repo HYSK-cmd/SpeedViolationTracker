@@ -6,6 +6,7 @@ python -m venv .venv
 
 For MAC USER:
 source .venv/bin/activate
+
 For WINDOW USER:
 .venv/Script/Activate.ps1
 

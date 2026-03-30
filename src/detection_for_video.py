@@ -6,16 +6,23 @@ import logging
 import numpy as np
 import supervision as sv
 from ultralytics import YOLO
+from collections import defaultdict, deque
 
 class ViewTransformer:
     def __init__(self, source: np.ndarray, target: np.ndarray):
         source = source.astype(np.float32)
         target = target.astype(np.float32)
         self.mat = cv2.getPerspectiveTransform(source, target)
+        # print(source)
+        # print(target)
+        # print(self.mat)
 
     def transform_points(self, points: np.ndarray) -> np.ndarray:
         reshaped_points = points.reshape(-1, 1, 2).astype(np.float32)
         transformed_points = cv2.perspectiveTransform(reshaped_points, self.mat)
+        # print(reshaped_points)
+        # print(transformed_points)
+        # print(transformed_points.reshape(-1, 2))
         return transformed_points.reshape(-1, 2)
 
 class VideoDetection:
@@ -51,8 +58,8 @@ class VideoDetection:
         self.target = np.array([
             [0, 0],
             [self.t_w-1, 0],
-            [self.t_w-1, self.t_h-1],
-            [0, self.t_h-1]
+            [0, self.t_h-1],
+            [self.t_w - 1, self.t_h - 1],
         ])
 
         # colors
@@ -72,7 +79,7 @@ class VideoDetection:
 
     def detect(self):
         cap = cv2.VideoCapture(self.video)
-        fps = cap.get(cv2.CAP_PROP_FPS)
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
         print("FPS:", fps)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
@@ -80,6 +87,11 @@ class VideoDetection:
         '''
         line
         '''
+        # create an instance of ViewTransformer
+        view_transformer = ViewTransformer(source=self.source, target=self.target)
+
+        coordinates = defaultdict(lambda: deque(maxlen=fps))
+
         # start video detection
         while True:
             ret, frame = cap.read()
@@ -103,7 +115,7 @@ class VideoDetection:
             # verbose=False disables console logs for every frame
 
             # copy the original frame for speeding cars
-            copied_frame = copy.deepcopy(frame)
+            # copied_frame = copy.deepcopy(frame)
 
             # draw lines
             # line A
@@ -114,6 +126,7 @@ class VideoDetection:
             cv2.line(frame, (self.line_B[0], self.line_B[1]), (self.line_B[2], self.line_B[3]), self.line_color, 2)
             cv2.putText(frame, "Line B", (self.line_B[0], self.line_y2-12),
                         cv2.FONT_HERSHEY_PLAIN, 1, self.text_color, 2)
+
 
             for box in results.boxes:
                 cls = int(box.cls[0])
@@ -143,9 +156,17 @@ class VideoDetection:
                 # attach id to each detected object
                 track_id = int(box.id[0])
 
-                # find the center of detected object
-                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                cv2.circle(frame, (cx, cy), 2, self.center_color, -1)
+                # find the center of detected cars
+                #cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                # find the bottom center of detected cars
+                cx, cy = (x1+x2) // 2, y2
+                cv2.circle(frame, (cx, cy), 3, self.center_color, -1)
+                points = np.array([cx, cy], np.int32)
+                points = view_transformer.transform_points(points).astype(int)
+
+                labels = []
+
+                sv.Detections.from_inference()
 
                 # initialize track entry
                 if track_id not in self.track_memory and conf >= self.conf_threshold:
@@ -193,7 +214,8 @@ class VideoDetection:
                                         logging.warning(f"id={track_id} is speeding at {str_speed}")
                                         # save the photo of the speeding car
                                         filename = f"id_{track_id}_{most_predicted_class}.jpg"
-                                        resize_image = cv2.resize(copied_frame[y1:y2, x1:x2], (640, 480))
+                                        car_img = frame[y1:y2, x1:x2]
+                                        resize_image = cv2.resize(car_img[y1:y2, x1:x2], (640, 480))
                                         cv2.imwrite(os.path.join(self.save_speeding_cars, filename), resize_image)
                                 logging.info(f"id={track_id}, frame_A={self.track_memory[track_id]["A"]}, frame_B={self.track_memory[track_id]["B"]}, cross_line={cross_line}, speed={speed:.1f} km/h")
 
@@ -207,10 +229,8 @@ class VideoDetection:
                     if car_speed is not None:
                         str_speed = f"{car_speed:.1f}km/h"
                         # normal speed are colored in white and exceeded speed are colored in red
-                        if track_id not in self.speed_violators:
-                            cv2.putText(frame, str_speed, (x1, y1 - 10), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 3)
-                        else:
-                            cv2.putText(frame, str_speed, (x1, y1 - 10), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 3)
+                        color = (255, 255, 255) if not track_id in self.speed_violators else (0, 0, 255)
+                        cv2.putText(frame, str_speed, (x1, y1 - 10), cv2.FONT_HERSHEY_PLAIN, 2, color, 3)
 
             cv2.imshow("Video", frame)
             # press ESC to stop the video
