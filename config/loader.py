@@ -4,6 +4,7 @@ from hydra.plugins.config_source import ConfigLoadError
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "settings.yaml"
 
+# loads and returns settings.yaml as a dict
 def load_settings():
     try:
         with open(DEFAULT_CONFIG_PATH, "r", encoding="utf-8") as f:

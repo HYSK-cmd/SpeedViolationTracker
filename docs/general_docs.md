@@ -8,7 +8,6 @@
 ### To-Dos
     - learn OCR to capture speeding cars' plate number
     - learn Flask and JavaScript to create a backend server for launching a UI web
-    - make a file to downlaod videos (threading, tqdm)
     - will add all testing videos in .gitignore
     - Test the video with video taken from raspberry pi camera
     - clean the codes and add typing

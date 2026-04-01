@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 from dataclasses import dataclass
+
+# opens a video file and returns its first frame
 def get_first_frame(path:str) -> np.ndarray:
     cap = cv2.VideoCapture(path)
     _, frame = cap.read()
@@ -14,7 +16,7 @@ class ROI:
     real_w: float
     real_h: float
 
-
+# immutable container for the region of interest
 class Trapezoid:
     def __init__(self, image: np.ndarray):
         # get image resolution

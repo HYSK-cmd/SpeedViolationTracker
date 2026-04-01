@@ -29,7 +29,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        choices=["yolov8n.pt", "yolov8l.pt", "yolo26n.pt", "yolo11x.pt"],
+        choices=["yolov8n.pt", "yolov8l.pt", "yolo11x.pt", "yolo26n.pt"],
         required=True,
         help="Path to the YOLOv8 model",
         type=str,
@@ -42,6 +42,7 @@ if __name__ == "__main__":
     config = load_settings()
     print(f"Settings: {config}")
 
+    # choose video or livestream
     match args.source:
         case "video":
             first_frame = get_first_frame(os.path.join("assets/videos", args.source_path))
