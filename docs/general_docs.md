@@ -10,7 +10,21 @@
     - learn Flask and JavaScript to create a backend server for launching a UI web
     - will add all testing videos in .gitignore
     - Test the video with video taken from raspberry pi camera
-    - clean the codes and add typing
+    - rename all videos
+    - 연속된 프레임을 계속 찍어서 best frame을 추출?? -미계획-
+    - change logs, output videos filenames to "%Y-%m-%d" or "%Y-%m-%d %H:%M or "%Y-%m-%d_%H-%M-%S"
+        - logs structure in a tree form
+        - example below
+```bash
+└───logs
+    └───speeding_cars
+        └───"%Y-%m-%d"
+             └───"%Y-%m-%d_%H-%M-%S"
+                  ├─── video
+                  │   └─── *.mp4, *.webm 
+                  ├─── *.png/jpg/jpeg
+                  └─── *.log
+```
 
 ## Hardware
-    - This is your plate. 항상 document 잘해서 나도 이해할수있게 해주셈s
+    - This is your plate. 
