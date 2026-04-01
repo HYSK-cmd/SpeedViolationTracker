@@ -4,32 +4,26 @@ SAVE_PATH:
   - "videos/"
   - "livestreams/"
 
-REAL_DIST_M: 8
+# speed limit
 SPEED_LIMIT: 60.0
-
-# distance
-TARGET_WIDTH: 25
-TARGET_HEIGHT: 250
 
 # detected objects
 alpha: 0.3
 conf_threshold: 0.5
 iou_threshold: 0.5
 
-# lines
-lines:
-  #line_A: [400, 297, 673, 297]
-  #line_B: [245, 350, 700, 350]
-  line_A: [344, 324, 800, 324]
-  line_B: [300, 381, 850, 381]
-
 # colors
 colors:
   LINE_COLOR: [0, 0, 0] # black
   BOX_COLOR: [0, 255, 0] # green
-  TEXT_COLOR: [255, 0, 0] # blue
+  TEXT_COLOR: [255, 255, 255] # white
   CENTER_COLOR: [0, 0, 255] # red
   OVERLAY_COLOR: [144, 238, 144] # light green
+  TRAPEZOID_COLOR: [153, 255, 255] # light yellow
+
+# styles
+font_scale: 1.3
+thickness: 2
 
 # logs
 log_file: "logs/info.log"

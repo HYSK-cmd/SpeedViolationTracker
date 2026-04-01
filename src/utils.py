@@ -1,48 +1,48 @@
-import os, cv2
+import cv2
 import numpy as np
 from dataclasses import dataclass
-
 def get_first_frame(path:str) -> np.ndarray:
     cap = cv2.VideoCapture(path)
     _, frame = cap.read()
     if frame is None:
         raise FileNotFoundError("Image not found")
-    frame = cv2.resize(frame, (1280, 720))
     return frame
 
-# return type
 @dataclass(frozen=True)
 class ROI:
-    xyxy: list[list]
-    roi_image: np.ndarray
+    points: list
+    real_w: float
+    real_h: float
 
-class Polygon:
+
+class Trapezoid:
     def __init__(self, image: np.ndarray):
+        # get image resolution
+        self.frame_width = image.shape[1]
+        self.frame_height = image.shape[0]
+
+        # define fixed resolution
+        self.fixed_width = 1280
+        self.fixed_height = 720
+
         # display window
         self.original = image.copy()
         self.display = image.copy()
         self.points = []
         self.isClosed = False
-        self.margin = 5
 
         # manual window
         self.bg_image = np.full((720, 600, 3), (255, 255, 255), dtype=np.uint8)
         self.adjust = 0
 
         # white background image for final image
-        self.final_image = np.full((720, 1280, 3), (255, 255, 255), dtype=np.uint8)
+        self.final_image = np.full(self.original.shape, 255, dtype=np.uint8)
 
-        # return image
-        self.masked_image = None
-
-    def get_masked_roi_image(self):
-        # create cv2 window
-        cv2.namedWindow("draw a rectangle")
+    def display_instruction(self) -> None:
         cv2.namedWindow("manual")
-        cv2.resizeWindow("draw a rectangle", 1280, 720)
         cv2.resizeWindow("manual", 500, 720)
 
-        # create an example of a correct rectangle
+        # create an example of a correct trapezoid
         rec = [(250, 260), (350, 260), (370, 460), (230, 460)]
         pts = np.array([rec], dtype=np.int32)
 
@@ -60,9 +60,20 @@ class Polygon:
         cv2.putText(self.bg_image, "C", (rec[2][0] + 20, rec[2][1] + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
         cv2.putText(self.bg_image, "D", (rec[3][0] - 30, rec[3][1] + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
+    # *** The points are auto-scaled, although we set the fixed resolution for ease of drawing ***
+    def get_source_roi_points(self) -> ROI | None:
+        # create cv2 window
+        cv2.namedWindow("draw a rectangle", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("draw a rectangle", self.fixed_width, self.fixed_height)
+
+        # create another cv2 window for drawing tutorial
+        self.display_instruction()
+
+        # set mouse event handler
         cv2.setMouseCallback("draw a rectangle", self.mouse_callback, self)
         self.draw_rectangle()
 
+        # start drawing
         while True:
             cv2.imshow("draw a rectangle", self.display)
             cv2.imshow("manual", self.bg_image)
@@ -70,32 +81,26 @@ class Polygon:
             # reset
             if option == ord('r'):
                 self.reset()
-            # save the masked image
+            # save the points
             elif option == ord('s'):
                 # fewer vertices checking
-                if len(self.points) != 5:
+                if len(self.points) != 4:
                     cv2.putText(self.display, "Must be a trapezoid or rectangle!",
                                 (100, 360), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
                     cv2.imshow("draw a rectangle", self.display)
                     # wait for one sec
                     cv2.waitKey(1000)
                     self.reset()
-                # overlap checking
-                elif not self.overlap():
-                    cv2.putText(self.display, "The rectangle is not closed!",
-                                (200, 360), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0),5)
-                    cv2.imshow("draw a rectangle", self.display)
-                    cv2.waitKey(1000)
-                    self.reset()
-                # when d is not pressed
+                # second verifier for a correct shape
                 elif not self.isClosed:
-                    cv2.putText(self.display, "Press d when finished!",
+                    cv2.putText(self.display, "Click 4 points to close!",
                                 (200, 360), cv2.FONT_HERSHEY_PLAIN, 4, (0, 255, 0), 5)
                     cv2.imshow("draw a rectangle", self.display)
-                    # wait for one sec
                     cv2.waitKey(1000)
                     self.reset()
+                # pass all verifications
                 elif self.isClosed:
+                    # ONLY FOR DISPLAY PURPOSE
                     # create a fully black background
                     mask = np.zeros(self.original.shape[:2], dtype=np.uint8)
                     # create an array of selected vertices
@@ -104,20 +109,20 @@ class Polygon:
                     cv2.fillPoly(mask, [vertices], (255, 255, 255))
                     # keep only the polygon area from the white background image
                     roi_image = cv2.bitwise_and(self.original, self.original, mask=mask)
-                    cv2.imshow("roi_image", roi_image)
-                    # extract masked image
-                    self.masked_image = cv2.bitwise_and(self.final_image, self.final_image, mask=mask)
-                    cv2.imshow("masked_image", self.masked_image)
-            # quit
-            elif option == ord('q') or option == 27:
+                    roi_resized = cv2.resize(roi_image, (1280, 720))
+                    cv2.imshow("roi_image", roi_resized)
+            # stop the drawing tool program
+            elif option == ord('q'):
                 break
-
         cv2.destroyAllWindows()
-        if self.masked_image is None:
-            raise RuntimeError("No roi image")
-        # exclude the last point
-        roi = ROI(self.points[:4], self.masked_image)
-        return roi
+        if self.points:
+            # real dist
+            real_width = float(input("Enter real width (m): "))
+            real_height = float(input("Enter real height (m): "))
+            # store points and inputs, and return as dataclass
+            return ROI(points=self.points, real_w=real_width, real_h=real_height)
+        print("no points")
+        return None
 
     def draw_rectangle(self):
         # re-copy the original frame
@@ -126,7 +131,7 @@ class Polygon:
         self.adjust = 0
         cv2.putText(self.bg_image, "l_click: point, r_click: done",
                     (10, 30), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0),2)
-        cv2.putText(self.bg_image, "r: reset, s: save, q or esc: quit",
+        cv2.putText(self.bg_image, "r: reset, s: save, q: quit & save",
                     (10, 70), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 2)
         self.adjust += 50
         # draw dots
@@ -135,7 +140,6 @@ class Polygon:
             cv2.putText(self.bg_image, f"{p[0], p[1]}",
                     (10, self.adjust+70), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), 2)
             self.adjust += 40
-
         # create a line between dots
         if len(self.points) > 1:
             for i in range(len(self.points)-1):
@@ -143,14 +147,6 @@ class Polygon:
         # connect the first and last dots if polygon is closed
         if len(self.points) > 2 and self.isClosed:
             cv2.line(self.display, self.points[-1], self.points[0], (0, 0, 255), 3)
-
-    # check the overlapping for the first and last dots
-    def overlap(self):
-        x1, y1 = self.points[0]
-        x2, y2 = self.points[-1]
-        if abs(x1 - x2) > self.margin or abs(y1 - y2) > self.margin:
-            return False
-        return True
 
     # reset operation
     def reset(self):
@@ -166,6 +162,8 @@ class Polygon:
         # left click to store coordinates
         if event == cv2.EVENT_LBUTTONDOWN and not self.isClosed:
             self.points.append([pt1, pt2])
+            if len(self.points) == 4:
+                self.isClosed = True
             self.draw_rectangle()
         # right click to finish shaping a polygon
         elif event == cv2.EVENT_RBUTTONDOWN and not self.isClosed:

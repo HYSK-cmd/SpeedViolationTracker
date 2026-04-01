@@ -1,8 +1,8 @@
 import os
 import argparse
-from src.utils import get_first_frame, Polygon
+from src.utils import get_first_frame, Trapezoid
 from config.loader import load_settings
-from src.detection_for_video import VideoDetection
+from src.video_speed_detector import VideoDetection
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -22,8 +22,14 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
     )
     parser.add_argument(
+        "--output_video",
+        required=False,
+        help="Path to the output video file",
+        type=str,
+    )
+    parser.add_argument(
         "--model",
-        choices=["yolov8n.pt", "yolov8l.pt", "yolo26n.pt"],
+        choices=["yolov8n.pt", "yolov8l.pt", "yolo26n.pt", "yolo11x.pt"],
         required=True,
         help="Path to the YOLOv8 model",
         type=str,
@@ -32,17 +38,16 @@ def parse_arguments() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_arguments()
-    print(f"Source: {args.source}, Source_Path: {args.source_path} Model: {args.model}")
+    print(f"Source: {args.source}, Source_Path: {args.source_path}, Video_Output_Path: {args.output_video}, Model: {args.model}")
     config = load_settings()
     print(f"Settings: {config}")
 
     match args.source:
         case "video":
             first_frame = get_first_frame(os.path.join("assets/videos", args.source_path))
-            polygon = Polygon(first_frame)
-            roi = polygon.get_masked_roi_image()
-            print(roi)
-            video = VideoDetection(vid_path=args.source_path, model=args.model, roi=roi, config=config)
+            trapezoid = Trapezoid(first_frame)
+            roi = trapezoid.get_source_roi_points()
+            video = VideoDetection(vid_path=args.source_path, output_vid=args.output_video, model=args.model, roi=roi, config=config)
             video.detect()
         case "livestream":
             pass
