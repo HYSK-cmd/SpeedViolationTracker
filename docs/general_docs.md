@@ -1,16 +1,17 @@
 # Plans
 ## Software
 ### Key Updates
-    - built a polygon drawer tool to extract a roi image
+    - built a trapezoid drawer tool to extract coordinates
     - created docs to record necessary updates
+    - developed speed estimation function
+    - finished utils.py and video_speed_detector.py
 ### To-Dos
-    - C: Complete, NC: Not Complete, IP: In Progress, X: No Longer Considered
-    - find a way to measure the real distance between detection lines (C)
     - learn OCR to capture speeding cars' plate number
-    - learn FastAPI and React.js to create a backend server for launching a UI web
-    - add more photos and videos to verify the logical coherence
-    - test with different YOLO models
+    - learn Flask and JavaScript to create a backend server for launching a UI web
     - make a file to downlaod videos (threading, tqdm)
+    - will add all testing videos in .gitignore
+    - Test the video with video taken from raspberry pi camera
+    - clean the codes and add typing
 
 ## Hardware
     - This is your plate. 항상 document 잘해서 나도 이해할수있게 해주셈s
