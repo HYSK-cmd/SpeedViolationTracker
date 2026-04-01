@@ -1,8 +1,6 @@
-import os
 import argparse
-from src.utils import get_first_frame, Trapezoid
 from config.loader import load_settings
-from src.video_speed_detector import VideoDetection
+from src.pipeline import run_video, run_livestream
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -36,7 +34,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     return parser.parse_args()
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
     print(f"Source: {args.source}, Source_Path: {args.source_path}, Video_Output_Path: {args.output_video}, Model: {args.model}")
     config = load_settings()
@@ -45,10 +43,9 @@ if __name__ == "__main__":
     # choose video or livestream
     match args.source:
         case "video":
-            first_frame = get_first_frame(os.path.join("assets/videos", args.source_path))
-            trapezoid = Trapezoid(first_frame)
-            roi = trapezoid.get_source_roi_points()
-            video = VideoDetection(vid_path=args.source_path, output_vid=args.output_video, model=args.model, roi=roi, config=config)
-            video.detect()
+            run_video(args, config)
         case "livestream":
-            pass
+            run_livestream(args, config)
+
+if __name__ == "__main__":
+    main()

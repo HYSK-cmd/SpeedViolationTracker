@@ -85,3 +85,8 @@ def _calculate_inv_scale():
 
 ## Modifications in script.py
     - Added an extra option for output_video_path
+
+# 04-01-2026
+## Change of Structure
+    - Deconcentrated script.py to src/pipeline.py
+    - Created a strcuture for Web UI and backend

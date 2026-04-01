@@ -5,6 +5,8 @@
     - created docs to record necessary updates
     - developed speed estimation function
     - finished utils.py and video_speed_detector.py
+    - created structure.md
+    - created and orginized the general structure
 ### To-Dos
     - learn OCR to capture speeding cars' plate number
     - learn Flask and JavaScript to create a backend server for launching a UI web
@@ -27,4 +29,4 @@
 ```
 
 ## Hardware
-    - This is your plate. 
+    - This is your plate.
