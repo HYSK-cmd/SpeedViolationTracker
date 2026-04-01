@@ -16,8 +16,8 @@
     - 연속된 프레임을 계속 찍어서 best frame을 추출?? -미계획-
     - change logs, output videos filenames to "%Y-%m-%d" or "%Y-%m-%d %H:%M or "%Y-%m-%d_%H-%M-%S"
         - logs structure in a tree form
-        - example below
-```bash
+```
+i.e)
 └───logs
     └───speeding_cars
         └───"%Y-%m-%d"

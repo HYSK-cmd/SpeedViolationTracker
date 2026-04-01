@@ -21,7 +21,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output_video",
-        required=False,
+        required=True,
         help="Path to the output video file",
         type=str,
     )
