@@ -1,0 +1,9 @@
+.venv
+.idea
+Project 1 - Car Counter/
+.DS_Store
+*.pyc
+__pycache__/
+Yolo-Models/
+*.pt
+4k_vid.mp4

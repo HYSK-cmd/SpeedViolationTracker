@@ -1,0 +1,30 @@
+# SETTINGS
+
+SAVE_PATH:
+  - "videos/"
+  - "livestreams/"
+
+# speed limit
+SPEED_LIMIT: 60.0
+
+# detected objects
+alpha: 0.3
+conf_threshold: 0.5
+iou_threshold: 0.5
+
+# colors
+colors:
+  LINE_COLOR: [0, 0, 0] # black
+  BOX_COLOR: [0, 255, 0] # green
+  TEXT_COLOR: [255, 255, 255] # white
+  CENTER_COLOR: [0, 0, 255] # red
+  OVERLAY_COLOR: [144, 238, 144] # light green
+  TRAPEZOID_COLOR: [153, 255, 255] # light yellow
+
+# styles
+font_scale: 1.3
+thickness: 2
+
+# logs
+log_file: "logs/info.log"
+save_speeding_cars_path: "logs/speeding_cars"
