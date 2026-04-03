@@ -1,5 +1,5 @@
 import os
-from src.utils import get_first_frame, Trapezoid
+from src.trapezoid_drawer import get_first_frame, Trapezoid
 from src.video_speed_detector import VideoDetection
 
 def run_video(args, config):

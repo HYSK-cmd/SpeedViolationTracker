@@ -6,4 +6,4 @@ Project 1 - Car Counter/
 __pycache__/
 Yolo-Models/
 *.pt
-4k_vid.mp4
+*.mp4

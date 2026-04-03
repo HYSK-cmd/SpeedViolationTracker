@@ -3,16 +3,20 @@ import cv2
 import math
 import logging
 import numpy as np
-from src.utils import ROI
 from ultralytics import YOLO
+from src.utils import *
+from src.trapezoid_drawer import ROI
 from collections import defaultdict, deque
 
 class VideoDetection:
     def __init__(self, vid_path: str, output_vid: str | None, model: str, roi: ROI, config: dict):
         # video I/O
         self.video = os.path.join("assets/videos", vid_path)
-        self.model = YOLO(os.path.join('../Yolo-Models', model))
+        self.model = YOLO(os.path.join("../Yolo-Models", model))
         self.output_video = os.path.join("outputs/videos", output_vid) if output_vid else None
+
+        # load license plate detection model
+        self.license_detector = YOLO("../Yolo-Models/anpr-demo-model.pt")
 
         # video output type
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -86,7 +90,7 @@ class VideoDetection:
 
     @staticmethod
     # yield frames one by one
-    def read_frame(cap: cv2.VideoCapture):
+    def read_frame(cap: cv2.VideoCapture) -> np.ndarray:
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -95,7 +99,7 @@ class VideoDetection:
 
     # crop the lower quarter of the detected vehicle bbox scaled back to original res
     # will be used for OCR
-    def _calculate_inv_scale(self, clean_frame: np.ndarray, x1: int, y1: int, x2: int, y2: int):
+    def _calculate_inv_scale(self, clean_frame: np.ndarray, x1: int, y1: int, x2: int, y2: int) -> np.ndarray:
         inv_scale_x = self.frame_w / 1280
         inv_scale_y = self.frame_h / 720
         ix1 = int(x1 * inv_scale_x)
@@ -106,8 +110,7 @@ class VideoDetection:
         h = car_img.shape[0]
         return car_img[int(h*0.75):, :]
 
-    # log and save photos of speeding vehicles
-    def _check_speeding(self, track_id: int, speed: float, most_predicted_class: str, clean_frame: np.ndarray, x1: int, y1: int, x2: int, y2: int):
+    def _capture_vehicle_image(self, track_id: int, speed: float, most_predicted_class: str, clean_frame: np.ndarray, x1: int, y1: int, x2: int, y2: int) -> None:
         str_speed = f"{speed:.1f} km/h"
         self.speed_violators[track_id] = str_speed
         logging.warning(f"id={track_id} is speeding at {str_speed}")
@@ -119,12 +122,15 @@ class VideoDetection:
         cv2.imwrite(os.path.join(self.save_speeding_cars, filename), car_img)
         logging.info(f"id={track_id}, frame_A={self.track_memory[track_id]["A"]}, frame_B={self.track_memory[track_id]["B"]}, speed={speed:.1f} km/h")
 
+    # log and save photos of speeding vehicles
+    def _capture_vehicle(self, track_id: int, speed: float, most_predicted_class: str, clean_frame: np.ndarray, x1: int, y1: int, x2: int, y2: int):
+        self._capture_vehicle_image(track_id, speed, most_predicted_class, clean_frame, x1, y1, x2, y2)
+        license_plates = self.license_detector(clean_frame)[0]
+
     # main execution: frame reading, model inference, vehicle tracking, speed estimation
     def detect(self):
         cap = cv2.VideoCapture(self.video)
-        if not cap.isOpened():
-            print("Unable to open video")
-            return
+        assert cap.isOpened(), "Unable to open video"
 
         # set a frame generator
         frame_generator = self.read_frame(cap)
@@ -133,6 +139,11 @@ class VideoDetection:
         self.frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+        # if output video exists
+        video_output = None
+        if self.output_video:
+            video_output = cv2.VideoWriter(self.output_video, self.fourcc, self.fps, (1280, 720))
 
         # store recent y-coords per track_id for speed estimation over each second
         coordinates = defaultdict(lambda: deque(maxlen=self.fps))
@@ -146,11 +157,6 @@ class VideoDetection:
         upper_based_scaled = int(self.upper_base * scale_y)
         lower_based_scaled = int(self.lower_base * scale_y)
         target_mat = self._get_perspective_trans(source_scaled)
-
-        # if output video exists
-        video_output = None
-        if self.output_video:
-            video_output = cv2.VideoWriter(self.output_video, self.fourcc, self.fps, (1280, 720))
 
         while True:
             # get a frame in a sequential manner
@@ -284,7 +290,7 @@ class VideoDetection:
                     if speed > self.speed_limit and track_id not in self.speed_violators:
                         self.speed_violators[track_id] = speed
                         logging.warning(f"id={track_id} is speeding at {speed:.1f} km/h")
-                        self._check_speeding(track_id, speed, most_predicted_class, clean_frame, x1, y1, x2, y2)
+                        self._capture_vehicle(track_id, speed, most_predicted_class, clean_frame, x1, y1, x2, y2)
                     # only color red in text if cars exceed speed limit otherwise keep it white
                     color = (0, 0, 255) if track_id in self.speed_violators else (255, 255, 255)
                     cv2.putText(frame, f"{speed:.1f}km/h", (x1, y1 - 10),
