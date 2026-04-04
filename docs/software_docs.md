@@ -90,3 +90,11 @@ def _calculate_inv_scale():
 ## Change of Structure
     - Deconcentrated script.py to src/pipeline.py
     - Created a strcuture for Web UI and backend
+
+# 04-03-2026
+## Backend Structure
+    - index.html -> Video or livestream
+    - redirect to either page
+    - Video: file upload -> redirect -> start analyzing
+    - Livestream: display raspberry pi cam, database, live logs
+    
