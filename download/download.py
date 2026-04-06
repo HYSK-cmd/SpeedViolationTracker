@@ -10,4 +10,5 @@ os.makedirs('../Yolo-Models', exist_ok=True)
 os.chdir("../Yolo-Models")
 print(os.getcwd())
 
-# download videos and models for testing
+# download models
+
