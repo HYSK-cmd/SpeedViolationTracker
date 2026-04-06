@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Violation Tracker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Speed Violation Tracker</h1>
+        </header>
+
+        <!-- Mode selector -->
+        <div class="mode-selector">
+            <button id="btn-video" class="mode-btn active" onclick="switchMode('video')">Video</button>
+            <button id="btn-livestream" class="mode-btn" onclick="switchMode('livestream')">Livestream</button>
+        </div>
+
+        <!-- Video mode -->
+        <section id="panel-video" class="panel">
+            <div class="upload-area" id="drop-zone">
+                <input type="file" id="file-input" accept="video/*" hidden>
+                <p class="upload-text">Drag or drop a video</p>
+                <p class="file-name" id="file-name"></p>
+            </div>
+
+            <!-- ROI drawing -->
+            <div id="roi-section" class="roi-section hidden">
+                <div class="roi-header">
+                    <span>Draw ROI (click 4 points: A → B → C → D)</span>
+                    <button class="log-clear" onclick="resetROI()">Reset</button>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="roi-canvas"></canvas>
+                </div>
+                <div class="form-row roi-inputs">
+                    <div class="form-group">
+                        <label for="real-width">Real Width (m)</label>
+                        <input type="number" id="real-width" placeholder="e.g. 3.5" step="0.1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="real-height">Real Height (m)</label>
+                        <input type="number" id="real-height" placeholder="e.g. 15" step="0.1" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="output-video">Output Filename</label>
+                    <input type="text" id="output-video" placeholder="i.e) output.mp4">
+                </div>
+                <div class="form-group">
+                    <label for="model-select">Model</label>
+                    <select id="model-select">
+                        <option value="">Select model</option>
+                        <option value="yolov8n.pt">yolov8n</option>
+                        <option value="yolov8l.pt">yolov8l</option>
+                        <option value="yolo11x.pt">yolo11x</option>
+                        <option value="yolo26n.pt">yolo26n</option>
+                    </select>
+                </div>
+            </div>
+            <button id="btn-run" class="run-btn" disabled onclick="runVideo()">Run Detection</button>
+        </section>
+
+        <!-- Livestream mode -->
+        <section id="panel-livestream" class="panel hidden">
+            <div class="livestream-status">
+                <span class="status-dot" id="status-dot"></span>
+                <span id="livestream-text">Livestream ready</span>
+            </div>
+            <div class="form-row">
+                <div class="form-group ls-save-toggle">
+                    <label>Save Video</label>
+                    <div class="toggle-btns">
+                        <button class="toggle-btn" id="save-yes" onclick="toggleSaveVideo(true)">Yes</button>
+                        <button class="toggle-btn active" id="save-no" onclick="toggleSaveVideo(false)">No</button>
+                    </div>
+                </div>
+                <div class="form-group ls-output">
+                    <label for="ls-output-video">Output Filename</label>
+                    <input type="text" id="ls-output-video" placeholder="i.e) output.mp4" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="ls-model-select">Model</label>
+                    <select id="ls-model-select">
+                        <option value="">Select model</option>
+                        <option value="yolov8n.pt">yolov8n</option>
+                        <option value="yolov8l.pt">yolov8l</option>
+                        <option value="yolo11x.pt">yolo11x</option>
+                        <option value="yolo26n.pt">yolo26n</option>
+                    </select>
+                </div>
+            </div>
+            <button id="btn-livestream-toggle" class="run-btn" disabled onclick="toggleLivestream()">Start Livestream</button>
+        </section>
+
+        <!-- Confirm modal -->
+        <div id="modal-overlay" class="modal-overlay hidden">
+            <div class="modal">
+                <p>Livestream is still running. Stop and switch to Video mode?</p>
+                <div class="modal-actions">
+                    <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+                    <button class="modal-btn confirm" onclick="confirmStopAndSwitch()">Stop and Switch</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log output -->
+        <div class="log-section">
+            <div class="log-header">
+                <span>Logs</span>
+                <button class="log-clear" onclick="clearLogs()">Clear</button>
+            </div>
+            <div class="log-output" id="log-output"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
