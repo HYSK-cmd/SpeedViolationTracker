@@ -59,7 +59,18 @@
 ### Data Transfer:
 - command: scp username@IP:/home/username/test_outdoor.mp4 .
 
-
+# 04-07-2026
+## Testing flask and HTTP server for livestreaming on Raspberry Pi
+- Set up a Python virtual environment for flask testing
+    - Command: python3 -m venv venv
+    - Command: source venv/bin/activate
+    - Command: pip install flask
+- Verified basic Flask HTTP server functionality
+    - Ran a simple Flask program (`Hello, World!`)
+    - Confirmed access via browser: `http://127.0.0.1:5000`
+- Tested Raspberry Pi camera using Python code
+    - Successfully captured a frame and saved as an image file
+    - Verified camera access through `Picamera2`
 
 
 
