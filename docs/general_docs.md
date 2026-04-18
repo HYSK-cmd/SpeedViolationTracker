@@ -28,7 +28,5 @@ i.e)
                   └─── *.log
 ```
 
-BACKEND, MONGODB: 차량 검색 -> 이미지
-
 ## Hardware
     - This is your plate.
