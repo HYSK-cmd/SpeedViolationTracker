@@ -32,6 +32,7 @@ def parse_arguments() -> argparse.Namespace:
         help="Path to the YOLOv8 model",
         type=str,
     )
+
     return parser.parse_args()
 
 def main():
@@ -39,7 +40,6 @@ def main():
     print(f"Source: {args.source}, Source_Path: {args.source_path}, Video_Output_Path: {args.output_video}, Model: {args.model}")
     config = load_settings()
     print(f"Settings: {config}")
-
     # choose video or livestream
     match args.source:
         case "video":

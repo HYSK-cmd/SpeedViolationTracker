@@ -104,4 +104,16 @@ def _calculate_inv_scale():
     - HTML Canvas for drawing ROI
     - Logs textarea
         - Displays server status (will fix to only display detection analysis)
-    
+
+# 04-17-2026
+## Refactoring Detection Pipeline
+    - Refactored detection pipeline with base_detector inheritance
+    - Cleaned up depencency and updated requirements.txt
+    - Modified script.py and pipeline.py to enable livestream detection
+    - Created a template for livestream_server.py
+    - Base_detector.py:
+        - Migrated all functions and logics to base_detector
+        - Added two abstract methods for inherited classes
+        - Removed EasyOCR code snippet for now
+        - Capturing function returns a full image of vehicle
+        

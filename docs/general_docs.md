@@ -8,10 +8,10 @@
     - created structure.md
     - created and orginized the general structure
 ### To-Dos
-    - learn OCR to capture speeding cars' plate number
+    - learn OCR to capture speeding cars' plate number (tentative)
     - learn Flask and JavaScript to create a backend server for launching a UI web
-    - will add all testing videos in .gitignore
-    - Test the video with video taken from raspberry pi camera
+    - will add all testing videos in .gitignore 
+    - Test the video with video taken from raspberry pi camera 
     - rename all videos
     - 연속된 프레임을 계속 찍어서 best frame을 추출?? -미계획-
     - change logs, output videos filenames to "%Y-%m-%d" or "%Y-%m-%d %H:%M or "%Y-%m-%d_%H-%M-%S"
