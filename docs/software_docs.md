@@ -116,4 +116,6 @@ def _calculate_inv_scale():
         - Added two abstract methods for inherited classes
         - Removed EasyOCR code snippet for now
         - Capturing function returns a full image of vehicle
-        
+
+# 04-19-2026
+## 

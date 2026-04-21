@@ -1,22 +1,23 @@
 # SETTINGS
 
+# FILE PATHS
 SAVE_PATH:
   - "videos/"
   - "livestreams/"
 
-# stream url
+# STREAM URL
 STREAM_URL: "http://__IP__....."
 
-# speed limit
+# SPEED LIMIT
 SPEED_LIMIT: 60.0
 
-# detected objects
-alpha: 0.3
-conf_threshold: 0.5
-iou_threshold: 0.5
+# INFERENCE
+ALPHA: 0.3
+CONF_THRESHOLD: 0.5
+IOU_THRESHOLD: 0.5
 
-# colors
-colors:
+# COLORS
+COLORS:
   LINE_COLOR: [0, 0, 0] # black
   BOX_COLOR: [0, 255, 0] # green
   TEXT_COLOR: [255, 255, 255] # white
@@ -24,10 +25,15 @@ colors:
   OVERLAY_COLOR: [144, 238, 144] # light green
   TRAPEZOID_COLOR: [153, 255, 255] # light yellow
 
-# styles
-font_scale: 1.3
-thickness: 2
+# STYLES
+FONT_SCALE: 1.3
+THICKNESS: 2
 
-# logs
-log_file: "logs/info.log"
-save_speeding_cars_path: "logs/speeding_cars"
+# LOGS
+LOG_FILE: "logs/info.log"
+SAVE_SPEEDING_CARS_PATH: "logs/speeding_cars"
+
+# CAMERA
+RES_W: 1280
+RES_H: 720
+FORMAT: "RGB888"

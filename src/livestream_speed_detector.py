@@ -5,7 +5,6 @@ import numpy as np
 from src.trapezoid_drawer import ROI
 from src.base_detector import BaseDetector
 
-
 class LiveStreamDetection(BaseDetector):
     def __init__(self, stream_url: str, model: str, roi: ROI, config: dict, output_vid: str | None = None):
         super().__init__(model=model, roi=roi, config=config, output_vid=output_vid)
@@ -17,13 +16,6 @@ class LiveStreamDetection(BaseDetector):
         cap = cv2.VideoCapture(self.stream_url)
         assert cap.isOpened(), "Unable to connect to livestream"
         return cap
-
-    def _frame_reader(self, cap: cv2.VideoCapture):
-        while not self._stop.is_set():
-            ret, frame = cap.read()
-            if not ret:
-                continue
-            self.frame_queue.put(frame)
 
     def read_frame(self, cap: cv2.VideoCapture):
         reader = threading.Thread(target=self._frame_reader, args=(cap,), daemon=True)

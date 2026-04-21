@@ -17,8 +17,8 @@ class BaseDetector(ABC):
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
         # inference hyperparameters
-        self.conf_threshold = config["conf_threshold"]
-        self.iou_threshold = config["iou_threshold"]
+        self.conf_threshold = config["CONF_THRESHOLD"]
+        self.iou_threshold = config["IOU_THRESHOLD"]
 
         # speed limit
         self.speed_limit = config["SPEED_LIMIT"]
@@ -42,25 +42,25 @@ class BaseDetector(ABC):
         self.fps = None
 
         # colors
-        self.line_color = config["colors"]["LINE_COLOR"]
-        self.text_color = config["colors"]["TEXT_COLOR"]
-        self.box_color = config["colors"]["BOX_COLOR"]
-        self.center_color = config["colors"]["CENTER_COLOR"]
-        self.overlay_color = config["colors"]["OVERLAY_COLOR"]
-        self.trapezoid_color = config["colors"]["TRAPEZOID_COLOR"]
-        self.alpha = config["alpha"]
+        self.line_color = config["COLORS"]["LINE_COLOR"]
+        self.text_color = config["COLORS"]["TEXT_COLOR"]
+        self.box_color = config["COLORS"]["BOX_COLOR"]
+        self.center_color = config["COLORS"]["CENTER_COLOR"]
+        self.overlay_color = config["COLORS"]["OVERLAY_COLOR"]
+        self.trapezoid_color = config["COLORS"]["TRAPEZOID_COLOR"]
+        self.alpha = config["ALPHA"]
 
         # styles
-        self.font_scale = config["font_scale"]
-        self.thickness = config["thickness"]
+        self.font_scale = config["FONT_SCALE"]
+        self.thickness = config["THICKNESS"]
 
         # memory
         self.track_memory = {}
         self.speed_violators = {}
 
         # logs
-        logging.basicConfig(level=logging.INFO, filename=os.path.abspath(config["log_file"]))
-        self.save_speeding_cars = os.path.abspath(config["save_speeding_cars_path"])
+        logging.basicConfig(level=logging.INFO, filename=os.path.abspath(config["LOG_FILE"]))
+        self.save_speeding_cars = os.path.abspath(config["SAVE_SPEEDING_CARS_PATH"])
 
     # perspective transform requires source trapezoid and bird eye's view matrix
     def _get_perspective_trans(self, source_scaled: np.ndarray) -> np.ndarray:
