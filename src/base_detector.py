@@ -4,6 +4,7 @@ import math
 import logging
 import numpy as np
 from ultralytics import YOLO
+from datetime import datetime
 from src.trapezoid_drawer import ROI
 from collections import defaultdict, deque
 
@@ -11,7 +12,7 @@ class BaseDetector:
     def __init__(self, source_path: str, model: str, roi: ROI, config: dict, output_vid: str | None = None):
         self.source_path = source_path
         self.model = YOLO(os.path.join("../Yolo-Models", model))
-        self.output_video = os.path.join("outputs/videos", output_vid) if output_vid else None
+        self.output_video = None
 
         # video output type
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -59,8 +60,21 @@ class BaseDetector:
         self.speed_violators = {}
 
         # logs
-        logging.basicConfig(level=logging.INFO, filename=os.path.abspath(config["LOG_FILE"]))
-        self.save_speeding_cars = os.path.abspath(config["SAVE_SPEEDING_CARS_PATH"])
+        now = datetime.now()
+        date_dir = now.strftime("%Y-%m-%d")
+        session_dir = now.strftime("%Y-%m-%d_%H-%M-%S")
+        base_log_path = os.path.abspath(config["SAVE_SPEEDING_CARS_PATH"])
+        self.session_path = os.path.join(base_log_path, date_dir, session_dir)
+        self.save_speeding_cars = self.session_path
+        self.video_output_dir = os.path.join(self.session_path, "video")
+        os.makedirs(self.save_speeding_cars, exist_ok=True)
+        os.makedirs(self.video_output_dir, exist_ok=True)
+
+        log_file = os.path.join(self.session_path, f"{session_dir}.log")
+        logging.basicConfig(level=logging.INFO, filename=log_file)
+
+        if output_vid:
+            self.output_video = os.path.join(self.video_output_dir, output_vid)
 
     # perspective transform requires source trapezoid and bird eye's view matrix
     def _get_perspective_trans(self, source_scaled: np.ndarray) -> np.ndarray:

@@ -1,32 +1,20 @@
 # Plans
 ## Software
 ### Key Updates
-    - built a trapezoid drawer tool to extract coordinates
-    - created docs to record necessary updates
-    - developed speed estimation function
-    - finished utils.py and video_speed_detector.py
-    - created structure.md
-    - created and orginized the general structure
+    - Built a trapezoid drawer tool to extract coordinates
+    - Created docs to record necessary updates
+    - Developed speed estimation function
+    - Finished utils.py and video_speed_detector.py
+    - Created structure.md
+    - Created and orginized the general structure
+    - Created livestream background server that will be deployed on raspberry pi
+    - Completed the pipeline for video and livestream (livestream will be debugged and tested by April 27th)
+    - Change logs, output videos filenames to "%Y-%m-%d" or "%Y-%m-%d %H:%M or "%Y-%m-%d_%H-%M-%S"
+    - Renamed all videos
 ### To-Dos
-    - learn OCR to capture speeding cars' plate number (tentative)
-    - learn Flask and JavaScript to create a backend server for launching a UI web
-    - will add all testing videos in .gitignore 
-    - Test the video with video taken from raspberry pi camera 
-    - rename all videos
-    - 연속된 프레임을 계속 찍어서 best frame을 추출?? -미계획-
-    - change logs, output videos filenames to "%Y-%m-%d" or "%Y-%m-%d %H:%M or "%Y-%m-%d_%H-%M-%S"
-        - logs structure in a tree form
-```
-i.e)
-└───logs
-    └───speeding_cars
-        └───"%Y-%m-%d"
-             └───"%Y-%m-%d_%H-%M-%S"
-                  ├─── video
-                  │   └─── *.mp4, *.webm 
-                  ├─── *.png/jpg/jpeg
-                  └─── *.log
-```
+    - Learn JavaScript to create a backend server for launching a UI web
+    - Will add all testing videos in .gitignore 
+    - Test the video with video taken from raspberry pi camera
 
 ## Hardware
 ### Key Updates

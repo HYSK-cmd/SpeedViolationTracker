@@ -122,6 +122,7 @@ def _calculate_inv_scale():
     - base_detector.py:
         - Removed abstract methods
         - Livestream option requires a Flask server that operates recording
+        - Created log file paths
     - video_speed_detector.py:
         - Removed overriding functions
     - pipeline.py:
