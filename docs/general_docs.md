@@ -29,4 +29,16 @@ i.e)
 ```
 
 ## Hardware
-    - This is your plate.
+### Key Updates
+    - Successfully completed initial hardware setup using Raspberry Pi 5 and Arducam IMX708 camera
+    - Established remote access via SSH (PowerShell) and GUI control via VNC
+    - Verified stable connectivity using both local WiFi and mobile hotspot environments
+    - Implemented camera functionality using rpicam tools (image + video capture)
+    - Conducted indoor and outdoor camera testing
+    - Validated file transfer workflow from Raspberry Pi to laptop using SCP
+    - Confirmed feasibility of recording and handling high-resolution video data (1080p @ 30fps)
+    - Observed impact of bitrate and resolution on video file size and quality
+### To-Dos
+    - Implement real-time video streaming from Raspberry Pi to laptop
+    - Construct HTTP server
+    - Optimize camera parameters (focus, exposure, bitrate, resolution)

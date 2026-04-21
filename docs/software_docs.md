@@ -117,5 +117,22 @@ def _calculate_inv_scale():
         - Removed EasyOCR code snippet for now
         - Capturing function returns a full image of vehicle
 
-# 04-19-2026
-## 
+# 04-20-2026
+## General Updates
+    - base_detector.py:
+        - Removed abstract methods
+        - Livestream option requires a Flask server that operates recording
+    - video_speed_detector.py:
+        - Removed overriding functions
+    - pipeline.py:
+        - Gets a URL server -> Retrieves an image -> Decode the image
+        - Rest are the same process as run_video function
+    - livestream_speed_detector.py:
+        - Removed overriding functions
+    - livestream_server.py:
+        - Created a Camera class that initializes picam2 and image processing
+        - Created a Flask server with four simple endpoints:
+            - 1. /get_first_frame returns a serialized bytes of an image
+            - 2. /health returns a status of the server
+            - 3. /livestream encodes each frame, wraps it in the proper MJPEG, and yields it as a stream
+            - 4. /shutdown stops picamera when the server is closed

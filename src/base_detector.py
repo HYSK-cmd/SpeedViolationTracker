@@ -3,13 +3,13 @@ import cv2
 import math
 import logging
 import numpy as np
-from abc import ABC, abstractmethod
 from ultralytics import YOLO
 from src.trapezoid_drawer import ROI
 from collections import defaultdict, deque
 
-class BaseDetector(ABC):
-    def __init__(self, model: str, roi: ROI, config: dict, output_vid: str | None = None):
+class BaseDetector:
+    def __init__(self, source_path: str, model: str, roi: ROI, config: dict, output_vid: str | None = None):
+        self.source_path = source_path
         self.model = YOLO(os.path.join("../Yolo-Models", model))
         self.output_video = os.path.join("outputs/videos", output_vid) if output_vid else None
 
@@ -105,13 +105,17 @@ class BaseDetector(ABC):
     def _capture_vehicle(self, track_id: int, speed: float, most_predicted_class: str, clean_frame: np.ndarray, x1: int, y1: int, x2: int, y2: int):
         self._capture_vehicle_image(track_id, speed, most_predicted_class, clean_frame, x1, y1, x2, y2)
 
-    @abstractmethod
     def _open_source(self) -> cv2.VideoCapture:
-        pass
+        cap = cv2.VideoCapture(self.source_path)
+        assert cap.isOpened(), f"Unable to open source: {self.source_path}"
+        return cap
 
-    @abstractmethod
     def read_frame(self, cap: cv2.VideoCapture):
-        pass
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            yield frame
 
     @staticmethod
     # end detection program if interrupted or finished

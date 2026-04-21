@@ -6,7 +6,7 @@ SAVE_PATH:
   - "livestreams/"
 
 # STREAM URL
-STREAM_URL: "http://__IP__....."
+STREAM_URL: "http://192.168.12.144:5000"
 
 # SPEED LIMIT
 SPEED_LIMIT: 60.0
