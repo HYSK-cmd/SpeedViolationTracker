@@ -178,8 +178,8 @@ class BaseDetector:
 
             self.frame_id += 1
 
-            # keep the image clean to capture speeding vehicles' license plate
-            clean_frame = frame.copy()
+            # keep the original frame to capture speeding vehicles' license plate
+            clean_frame = frame
 
             # resize to a fixed res
             frame = cv2.resize(frame, (1280, 720))
