@@ -72,4 +72,43 @@
     - Successfully captured a frame and saved as an image file
     - Verified camera access through `Picamera2`
 
+# 04-18-2026
+## Video Livestreaming on Raspberry Pi
+### Flask + PiCamera2 Server Setup:
+- Developed an initial Flask-based HTTP server for Raspberry Pi camera streaming
+- Initialized the Pi Camera globally using Picamera2 to avoid repeatedly opening the camera
+- Configured camera capture at 1920x1080 resolution using RGB888 format
+- Converted captured frames from RGB to BGR for OpenCV compatibility
 
+### Server Endpoints:
+- Started the server on Raspberry Pi
+    - Command: `python3 livestream_server.py`
+- Verified server health check
+    - URL: `http://192.168.12.144:5000/health`
+- Implemented endpoint to capture a single frame from the camera
+    - URL: `http://192.168.12.144:5000/get_first_frame`
+- Implemented MJPEG livestream endpoint for continuous video streaming
+    - URL: `http://192.168.12.144:5000/livestream`
+
+### Livestream Testing:
+- Tested video livestreaming from Raspberry Pi to laptop through the local network
+- Successfully confirmed that the laptop could receive live camera frames from the Raspberry Pi
+- Observed significantly low FPS when fetching the livestream on the laptop side
+- Identified potential bottlenecks from high-resolution frame capture, JPEG encoding, network transfer, and laptop-side frame decoding
+
+# 04-19-2026
+## Video livestreaming Optimization and Speed Detection Program Integration Test
+- Improved the Flask livestreaming server by moving camera capture into an independent background thread
+- Used a shared `latest_frame` buffer protected by `threading.Lock`
+- Reduced camera resolution from 1920x1080 to 1280x720 to improve streaming stability and reduce network/encoding load
+
+### Testing Results:
+- Successfully confirmed that the laptop could receive continuous video input from the Raspberry Pi
+- Verified that `/get_first_frame` and `/livestream` worked with the updated threaded capture design
+- Observed improved responsiveness compared to the initial livestream implementation
+
+### Speed Detector Program Test:
+- Tested the livestream input with the speed detector program on the laptop side
+    - Command: python script.py --source livestream --source_path http://192.168.12.144:5000 --output_video output.mp4 --model yolov8n.pt
+- Confirmed that the detector could receive frames from the Raspberry Pi stream
+- Identified that further FPS optimization may be needed for smoother real-time detection
