@@ -13,7 +13,7 @@ git clone https://github.com/HYSK-cmd/SpeedViolaterDetector.git
 
 ### Prerequisite: YOLO Models
 Model weights are **not** included in the repo. Place your `.pt` files in a
-`Yolo-Models/` folder **next to** the project folder (a sibling, not inside it):
+`Yolo-Models/` folder next to the project folder:
 ```
 <parent>/
 ├── SpeedViolaterDetector/
@@ -42,12 +42,11 @@ python ./script.py --source livestream --source_path stream_url --output_video *
 `./run.sh` starts a web server — open it in a browser.
 ```bash
 # local only
-./run.sh                        # http://127.0.0.1:5000
+./run.sh
 
 # share on the same Wi-Fi
-HOST=0.0.0.0 ./run.sh           # then others open http://<your-LAN-IP>:5000
+HOST=0.0.0.0 ./run.sh
 ```
-> macOS: port 5000 may be taken by AirPlay Receiver. Use another port:
 > `HOST=0.0.0.0 PORT=5001 ./run.sh`
 > Set `FLASK_DEBUG=1` only while developing.
 
@@ -58,7 +57,7 @@ STREAM_URL: "http://<pi-ip>:5000"
 ```
 The Pi and the web server must be on the same network.
 
-### Output / Storage
+### Storage
 Each run creates a session folder:
 ```
 logs/speeding_cars/<YYYY-MM-DD>/<YYYY-MM-DD_HH-MM-SS>/
