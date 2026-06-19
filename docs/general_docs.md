@@ -9,10 +9,9 @@
     - Created and orginized the general structure
     - Created livestream background server that will be deployed on raspberry pi
     - Completed the pipeline for video and livestream (livestream will be debugged and tested by April 27th)
-    - Change logs, output videos filenames to "%Y-%m-%d" or "%Y-%m-%d %H:%M or "%Y-%m-%d_%H-%M-%S"
+    - Changed logs, output videos filenames to "%Y-%m-%d" or "%Y-%m-%d %H:%M or "%Y-%m-%d_%H-%M-%S"
     - Renamed all videos
 ### To-Dos
-    - Learn JavaScript to create a backend server for launching a UI web
     - Will add all testing videos in .gitignore 
     - Test the video with video taken from raspberry pi camera
 

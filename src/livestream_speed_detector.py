@@ -40,7 +40,7 @@ class LiveStreamDetection(BaseDetector):
     def __init__(self, stream_url: str, model: str, roi: ROI, config: dict, output_vid: str | None = None):
         super().__init__(source_path=stream_url, model=model, roi=roi, config=config, output_vid=output_vid)
 
-    def detect(self):
+    def detect(self, stop_event: threading.Event | None = None):
         cap = self._open_source()
 
         self.frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -171,6 +171,10 @@ class LiveStreamDetection(BaseDetector):
 
         # main thread: display at stream FPS, overlay latest inference results
         while True:
+            if stop_event is not None and stop_event.is_set():
+                logging.info("Livestream stopped")
+                break
+
             raw = grabber.read()
             if raw is None:
                 continue
@@ -205,8 +209,12 @@ class LiveStreamDetection(BaseDetector):
             if video_output is not None:
                 video_output.write(frame)
 
+            # stop on ESC (CLI) or when the web app signals via stop_event
             if cv2.waitKey(1) & 0xFF == 27:
-                logging.info("Program paused")
+                logging.info("Livestream stopped")
+                break
+            if stop_event is not None and stop_event.is_set():
+                logging.info("Livestream stopped")
                 break
 
         _stopped.set()

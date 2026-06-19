@@ -70,8 +70,25 @@ class BaseDetector:
         os.makedirs(self.save_speeding_cars, exist_ok=True)
         os.makedirs(self.video_output_dir, exist_ok=True)
 
+        # per-session log file named with the date format (e.g. 2025-04-04_06-18-00.log).
+        # We attach a FileHandler directly instead of using logging.basicConfig(): in the
+        # web process the root logger already has the SSE QueueHandler, so basicConfig()
+        # is a no-op and the file would never be written. Any FileHandler left over from a
+        # previous session in the same process is removed so each log file only holds its
+        # own session.
         log_file = os.path.join(self.session_path, f"{session_dir}.log")
-        logging.basicConfig(level=logging.INFO, filename=log_file)
+        root_logger = logging.getLogger()
+        for handler in list(root_logger.handlers):
+            if getattr(handler, "_session_handler", False):
+                root_logger.removeHandler(handler)
+                handler.close()
+        file_handler = logging.FileHandler(log_file)
+        file_handler._session_handler = True
+        file_handler.setFormatter(
+            logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
+        )
+        root_logger.addHandler(file_handler)
+        root_logger.setLevel(logging.INFO)
 
         if output_vid:
             self.output_video = os.path.join(self.video_output_dir, output_vid)

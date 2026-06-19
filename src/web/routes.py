@@ -3,6 +3,9 @@ import cv2
 import queue
 import threading
 import logging
+import numpy as np
+import requests
+from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify, Response, current_app, send_file
 from io import BytesIO
 
@@ -12,6 +15,9 @@ web_bp = Blueprint('web', __name__)
 log_queues = []
 log_lock = threading.Lock()
 
+# livestream session state (only one livestream runs at a time)
+livestream_lock = threading.Lock()
+livestream_state = {"thread": None, "stop_event": None}
 
 class QueueHandler(logging.Handler):
     def emit(self, record):
@@ -20,13 +26,11 @@ class QueueHandler(logging.Handler):
             for q in log_queues:
                 q.put(msg)
 
-
 # attach handler to root logger so all logging.info/warning/error calls are captured
 _handler = QueueHandler()
 _handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S'))
 logging.getLogger().addHandler(_handler)
 logging.getLogger().setLevel(logging.INFO)
-
 
 @web_bp.route('/')
 def index():
@@ -96,15 +100,85 @@ def run_video():
     return jsonify({'message': 'Processing started'})
 
 
+@web_bp.route('/api/livestream/first-frame')
+def livestream_first_frame():
+    from config.loader import load_settings
+    config = load_settings()
+    server = config["STREAM_URL"]
+    try:
+        resp = requests.get(f"{server}/get_first_frame", timeout=10)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        logging.error(f"Cannot reach livestream server {server}: {e}")
+        return jsonify({'error': f'Cannot reach livestream server: {e}'}), 502
+    img_arr = np.frombuffer(resp.content, np.uint8)
+    frame = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+    if frame is None:
+        return jsonify({'error': 'Invalid frame from livestream server'}), 502
+    _, buf = cv2.imencode('.jpg', frame)
+    return send_file(BytesIO(buf.tobytes()), mimetype='image/jpeg')
+
+
 @web_bp.route('/api/livestream/start', methods=['POST'])
 def start_livestream():
-    logging.info("Livestream started")
+    data = request.json or {}
+    model = data.get('model')
+    roi_data = data.get('roi')
+    save_video = bool(data.get('save_video'))
+    if not model or not roi_data:
+        return jsonify({'error': 'Missing model or ROI'}), 400
+
+    with livestream_lock:
+        if livestream_state["thread"] and livestream_state["thread"].is_alive():
+            return jsonify({'error': 'Livestream already running'}), 409
+
+        stop_event = threading.Event()
+
+        def _run():
+            from config.loader import load_settings
+            from src.trapezoid_drawer import ROI
+            from src.livestream_speed_detector import LiveStreamDetection
+            config = load_settings()
+            server = config["STREAM_URL"]
+            roi = ROI(
+                points=roi_data['points'],
+                real_w=roi_data['real_w'],
+                real_h=roi_data['real_h'],
+            )
+            # output videos are auto-named with the date format and stored alongside the
+            # session logs under logs/speeding_cars/<date>/<datetime>/video/.
+            output_vid = None
+            if save_video:
+                output_vid = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".mp4"
+            logging.info("Livestream started")
+            try:
+                livestream = LiveStreamDetection(
+                    stream_url=f"{server}/livestream",
+                    output_vid=output_vid,
+                    model=model,
+                    roi=roi,
+                    config=config,
+                )
+                livestream.detect(stop_event=stop_event)
+            except Exception as e:
+                logging.error(f"Livestream error: {e}")
+
+        thread = threading.Thread(target=_run, daemon=True)
+        livestream_state["thread"] = thread
+        livestream_state["stop_event"] = stop_event
+        thread.start()
+
     return jsonify({'message': 'Livestream started'})
 
 
 @web_bp.route('/api/livestream/stop', methods=['POST'])
 def stop_livestream():
-    logging.info("Livestream stopped")
+    with livestream_lock:
+        stop_event = livestream_state["stop_event"]
+        if stop_event is not None:
+            stop_event.set()
+        livestream_state["thread"] = None
+        livestream_state["stop_event"] = None
     return jsonify({'message': 'Livestream stopped'})
 
 

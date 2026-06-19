@@ -237,6 +237,26 @@ header h1 {
     cursor: not-allowed;
 }
 
+/* Secondary button (e.g. Connect to Camera) */
+.run-btn.secondary {
+    background: transparent;
+    color: #ccc;
+    border: 1px solid #333;
+    margin-bottom: 16px;
+}
+
+.run-btn.secondary:hover {
+    border-color: #555;
+    opacity: 1;
+}
+
+/* Livestream save hint */
+.ls-save-hint {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 16px;
+}
+
 /* Livestream */
 .livestream-status {
     display: flex;
