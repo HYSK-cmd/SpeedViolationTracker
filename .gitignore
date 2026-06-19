@@ -6,8 +6,6 @@ Project 1 - Car Counter/
 __pycache__/
 Yolo-Models/
 *.pt
-
-# generated detection outputs (videos/captures/logs) — keep these out of git.
-# Sample test videos placed in assets/videos/ are still tracked.
+.vscode
 logs/speeding_cars/
 outputs/
