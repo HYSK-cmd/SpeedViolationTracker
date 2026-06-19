@@ -7,6 +7,10 @@ let roiPoints = [];
 let roiImage = null;
 const ROI_MAX_POINTS = 4;
 
+// --- Livestream ROI state ---
+let lsRoiPoints = [];
+let lsRoiImage = null;
+
 // --- SSE log stream ---
 function connectLogs() {
     if (eventSource) return;
@@ -54,33 +58,16 @@ let saveVideo = false;
 function checkLivestreamReady() {
     if (livestreamActive) return;
     const model = document.getElementById('ls-model-select').value;
-    if (!model) {
-        document.getElementById('btn-livestream-toggle').disabled = true;
-        return;
-    }
-    if (saveVideo) {
-        const outputVideo = document.getElementById('ls-output-video').value.trim();
-        document.getElementById('btn-livestream-toggle').disabled = !isValidVideoFilename(outputVideo);
-    } else {
-        document.getElementById('btn-livestream-toggle').disabled = false;
-    }
+    const realW = parseFloat(document.getElementById('ls-real-width').value);
+    const realH = parseFloat(document.getElementById('ls-real-height').value);
+    const roiOk = lsRoiImage && lsRoiPoints.length === ROI_MAX_POINTS && realW > 0 && realH > 0;
+    document.getElementById('btn-livestream-toggle').disabled = !(model && roiOk);
 }
 
 function toggleSaveVideo(on) {
     saveVideo = on;
     document.getElementById('save-yes').classList.toggle('active', on);
     document.getElementById('save-no').classList.toggle('active', !on);
-    const input = document.getElementById('ls-output-video');
-    const label = input.closest('.form-group').querySelector('label');
-    input.disabled = !on;
-    if (on) {
-        input.placeholder = 'i.e) output.mp4';
-        label.classList.remove('disabled-label');
-    } else {
-        input.value = '';
-        input.placeholder = '';
-        label.classList.add('disabled-label');
-    }
     checkLivestreamReady();
 }
 
@@ -183,21 +170,21 @@ function loadFirstFrame(filename) {
     img.src = `/api/video/first-frame/${filename}`;
 }
 
-function drawCanvas() {
-    const canvas = document.getElementById('roi-canvas');
+// generic ROI renderer shared by video and livestream canvases
+function drawROI(canvas, image, points) {
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(roiImage, 0, 0);
+    ctx.drawImage(image, 0, 0);
 
-    if (roiPoints.length === 0) return;
+    if (points.length === 0) return;
 
     // draw filled polygon with transparency
-    if (roiPoints.length >= 3) {
+    if (points.length >= 3) {
         ctx.beginPath();
-        ctx.moveTo(roiPoints[0][0], roiPoints[0][1]);
-        for (let i = 1; i < roiPoints.length; i++) {
-            ctx.lineTo(roiPoints[i][0], roiPoints[i][1]);
+        ctx.moveTo(points[0][0], points[0][1]);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i][0], points[i][1]);
         }
-        if (roiPoints.length === ROI_MAX_POINTS) ctx.closePath();
+        if (points.length === ROI_MAX_POINTS) ctx.closePath();
         ctx.fillStyle = 'rgba(153, 255, 255, 0.2)';
         ctx.fill();
     }
@@ -205,23 +192,23 @@ function drawCanvas() {
     // draw lines
     ctx.strokeStyle = '#ff3333';
     ctx.lineWidth = 2;
-    for (let i = 0; i < roiPoints.length - 1; i++) {
+    for (let i = 0; i < points.length - 1; i++) {
         ctx.beginPath();
-        ctx.moveTo(roiPoints[i][0], roiPoints[i][1]);
-        ctx.lineTo(roiPoints[i + 1][0], roiPoints[i + 1][1]);
+        ctx.moveTo(points[i][0], points[i][1]);
+        ctx.lineTo(points[i + 1][0], points[i + 1][1]);
         ctx.stroke();
     }
     // close shape
-    if (roiPoints.length === ROI_MAX_POINTS) {
+    if (points.length === ROI_MAX_POINTS) {
         ctx.beginPath();
-        ctx.moveTo(roiPoints[3][0], roiPoints[3][1]);
-        ctx.lineTo(roiPoints[0][0], roiPoints[0][1]);
+        ctx.moveTo(points[3][0], points[3][1]);
+        ctx.lineTo(points[0][0], points[0][1]);
         ctx.stroke();
     }
 
     // draw points with labels
     const labels = ['A', 'B', 'C', 'D'];
-    roiPoints.forEach((p, i) => {
+    points.forEach((p, i) => {
         ctx.beginPath();
         ctx.arc(p[0], p[1], 5, 0, Math.PI * 2);
         ctx.fillStyle = '#fff';
@@ -236,6 +223,22 @@ function drawCanvas() {
     });
 }
 
+// add a clicked point to the given ROI canvas, returns true if a point was added
+function addRoiPoint(canvas, points, e) {
+    if (points.length >= ROI_MAX_POINTS) return false;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = Math.round((e.clientX - rect.left) * scaleX);
+    const y = Math.round((e.clientY - rect.top) * scaleY);
+    points.push([x, y]);
+    return true;
+}
+
+function drawCanvas() {
+    drawROI(document.getElementById('roi-canvas'), roiImage, roiPoints);
+}
+
 function resetROI() {
     roiPoints = [];
     drawCanvas();
@@ -244,16 +247,11 @@ function resetROI() {
 
 // canvas click handler
 document.getElementById('roi-canvas').addEventListener('click', (e) => {
-    if (!roiImage || roiPoints.length >= ROI_MAX_POINTS) return;
-    const canvas = e.target;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = Math.round((e.clientX - rect.left) * scaleX);
-    const y = Math.round((e.clientY - rect.top) * scaleY);
-    roiPoints.push([x, y]);
-    drawCanvas();
-    checkReady();
+    if (!roiImage) return;
+    if (addRoiPoint(e.target, roiPoints, e)) {
+        drawCanvas();
+        checkReady();
+    }
 });
 
 // --- Run video detection ---
@@ -284,6 +282,58 @@ async function runVideo() {
     }
 }
 
+// --- Livestream ROI ---
+async function connectLivestream() {
+    const btn = document.getElementById('btn-ls-connect');
+    btn.disabled = true;
+    btn.textContent = 'Connecting...';
+    appendLog('Connecting to livestream camera...');
+
+    const img = new Image();
+    img.onload = () => {
+        lsRoiImage = img;
+        lsRoiPoints = [];
+        const section = document.getElementById('ls-roi-section');
+        section.classList.remove('hidden');
+        const canvas = document.getElementById('ls-roi-canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        drawROI(canvas, lsRoiImage, lsRoiPoints);
+        appendLog('Camera connected. Draw the ROI to continue.');
+        btn.textContent = 'Reconnect to Camera';
+        btn.disabled = false;
+        checkLivestreamReady();
+    };
+    img.onerror = async () => {
+        // surface the server error message if there is one
+        try {
+            const res = await fetch('/api/livestream/first-frame');
+            const data = await res.json();
+            appendLog(`Camera connection failed: ${data.error || res.statusText}`);
+        } catch (err) {
+            appendLog(`Camera connection failed: ${err.message}`);
+        }
+        btn.textContent = 'Connect to Camera';
+        btn.disabled = false;
+    };
+    // cache-bust so a reconnect always re-fetches
+    img.src = `/api/livestream/first-frame?t=${Date.now()}`;
+}
+
+function resetLsROI() {
+    lsRoiPoints = [];
+    drawROI(document.getElementById('ls-roi-canvas'), lsRoiImage, lsRoiPoints);
+    checkLivestreamReady();
+}
+
+document.getElementById('ls-roi-canvas').addEventListener('click', (e) => {
+    if (!lsRoiImage || livestreamActive) return;
+    if (addRoiPoint(e.target, lsRoiPoints, e)) {
+        drawROI(e.target, lsRoiImage, lsRoiPoints);
+        checkLivestreamReady();
+    }
+});
+
 // --- Livestream ---
 function setLivestreamUI(active) {
     livestreamActive = active;
@@ -297,11 +347,13 @@ function setLivestreamUI(active) {
         btn.textContent = 'Stop Livestream';
         btn.classList.add('stop');
         btn.disabled = false;
+        document.getElementById('btn-ls-connect').disabled = true;
     } else {
         dot.classList.remove('live');
         text.textContent = 'Livestream ready';
         btn.textContent = 'Start Livestream';
         btn.classList.remove('stop');
+        document.getElementById('btn-ls-connect').disabled = false;
         checkLivestreamReady();
     }
 }
@@ -315,20 +367,28 @@ async function toggleLivestream() {
 }
 
 async function startLivestream() {
-    const outputVideo = document.getElementById('ls-output-video').value.trim();
     const model = document.getElementById('ls-model-select').value;
-    if (!model) return;
-    if (saveVideo && !isValidVideoFilename(outputVideo)) return;
+    const realW = parseFloat(document.getElementById('ls-real-width').value);
+    const realH = parseFloat(document.getElementById('ls-real-height').value);
+    if (!model || lsRoiPoints.length !== ROI_MAX_POINTS || !(realW > 0) || !(realH > 0)) return;
 
     try {
         const res = await fetch('/api/livestream/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ output_video: outputVideo, model: model }),
+            body: JSON.stringify({
+                model: model,
+                save_video: saveVideo,
+                roi: { points: lsRoiPoints, real_w: realW, real_h: realH },
+            }),
         });
         const data = await res.json();
-        setLivestreamUI(true);
-        appendLog(data.message);
+        if (res.ok) {
+            setLivestreamUI(true);
+            appendLog(data.message);
+        } else {
+            appendLog(`Livestream error: ${data.error}`);
+        }
     } catch (err) {
         appendLog(`Livestream error: ${err.message}`);
     }
@@ -350,6 +410,7 @@ document.getElementById('output-video').addEventListener('input', checkReady);
 document.getElementById('model-select').addEventListener('change', checkReady);
 document.getElementById('real-width').addEventListener('input', checkReady);
 document.getElementById('real-height').addEventListener('input', checkReady);
-document.getElementById('ls-output-video').addEventListener('input', checkLivestreamReady);
 document.getElementById('ls-model-select').addEventListener('change', checkLivestreamReady);
+document.getElementById('ls-real-width').addEventListener('input', checkLivestreamReady);
+document.getElementById('ls-real-height').addEventListener('input', checkLivestreamReady);
 connectLogs();

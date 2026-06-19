@@ -5,29 +5,69 @@ End-to-end computer vision pipeline for vehicle speed violator detection from vi
 ![Demo](assets/gif/demo.gif)
 ## QUICKSTART
 ### 1) Install
+The run.sh script will automatically set up everything!
 ```bash
 git clone https://github.com/HYSK-cmd/SpeedViolaterDetector.git
-python -m venv .venv
-
-For MAC USER:
-source .venv/bin/activate
-
-For WINDOW USER:
-.venv/Script/Activate.ps1
-
-pip install -r requirements.txt
+./run.sh 
 ```
-## 2) Run with default config
-### Run video
+
+### Prerequisite: YOLO Models
+Model weights are **not** included in the repo. Place your `.pt` files in a
+`Yolo-Models/` folder **next to** the project folder (a sibling, not inside it):
+```
+<parent>/
+├── SpeedViolaterDetector/
+└── Yolo-Models/
+    └── yolov8n.pt, yolov8l.pt, ...
+```
+
+### 1.5) Raspberry Pi Camera Setup
+ㄴssh into your raspberry pi5
 ```bash
-python ./script.py --source video --source_path path/to/video.mp4 --output_video *.mp4 --model '*.pt'
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3-picamera2
 ```
-### Run livestream
+
+### 2) Run with default config
+#### Run video
+```bash
+python ./script.py --source video --source_path path/to/video.mp4 --output_video *.mp4 --model *.pt
+```
+#### Run livestream
 ```bash
 flask run
-python ./script.py --source livestream --output_video *.mp4 --model '*.pt'
+python ./script.py --source livestream --source_path stream_url --output_video *.mp4 --model *.pt
 ```
-## 3) Project Structure
+### Run the Web App
+`./run.sh` starts a web server — open it in a browser.
+```bash
+# local only
+./run.sh                        # http://127.0.0.1:5000
+
+# share on the same Wi-Fi
+HOST=0.0.0.0 ./run.sh           # then others open http://<your-LAN-IP>:5000
+```
+> macOS: port 5000 may be taken by AirPlay Receiver. Use another port:
+> `HOST=0.0.0.0 PORT=5001 ./run.sh`
+> Set `FLASK_DEBUG=1` only while developing.
+
+### Livestream Config
+Set the Raspberry Pi camera server address in `config/settings.yaml`:
+```yaml
+STREAM_URL: "http://<pi-ip>:5000"
+```
+The Pi and the web server must be on the same network.
+
+### Output / Storage
+Each run creates a session folder:
+```
+logs/speeding_cars/<YYYY-MM-DD>/<YYYY-MM-DD_HH-MM-SS>/
+├── <session>.log            # run log
+├── id_<id>_<class>.jpg      # captured speed violators (car/truck/motorcycle/bus)
+└── video/                   # annotated output video (if "Save Video" is on)
+```
+
+### 3) Project Structure
 ```
 Computer_Vision/
 ├───assets/

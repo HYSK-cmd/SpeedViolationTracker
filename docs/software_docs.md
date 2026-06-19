@@ -137,3 +137,4 @@ def _calculate_inv_scale():
             - 2. /health returns a status of the server
             - 3. /livestream encodes each frame, wraps it in the proper MJPEG, and yields it as a stream
             - 4. /shutdown stops picamera when the server is closed
+    - Updated structure.md

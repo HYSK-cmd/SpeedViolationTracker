@@ -1,6 +1,5 @@
 import yaml
 from pathlib import Path
-from hydra.plugins.config_source import ConfigLoadError
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "settings.yaml"
 
@@ -10,9 +9,9 @@ def load_settings():
         with open(DEFAULT_CONFIG_PATH, "r", encoding="utf-8") as f:
             content = yaml.safe_load(f)
     except FileNotFoundError as e:
-        raise ConfigLoadError(f"Settings file not found: {e}")
+        raise FileNotFoundError(f"Settings file not found: {e}")
     if content is None:
         return {}
     if not isinstance(content, dict):
-        raise ConfigLoadError(f"Settings file does not contain a dict: {type(content)}")
+        raise ValueError(f"Settings file does not contain a dict: {type(content)}")
     return content
