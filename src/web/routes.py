@@ -12,9 +12,6 @@ from io import BytesIO
 
 web_bp = Blueprint('web', __name__)
 
-# where finished video-detection results are written (kept in sync with VideoDetection)
-OUTPUT_VIDEO_DIR = os.path.abspath(os.path.join("outputs", "videos"))
-
 # SSE log broadcasting
 log_queues = []
 log_lock = threading.Lock()
@@ -58,9 +55,11 @@ class LatestFrame:
             return self._active
 
 
-# live frames + status for the single active video detection
+# live frames + status for the single active video detection.
+# "output" is the display name; "output_path" is the full path the result is served from
+# (the annotated video is saved inside the per-session logs/speeding_cars/.../video/ dir).
 video_frames = LatestFrame()
-video_state = {"running": False, "output": None}
+video_state = {"running": False, "output": None, "output_path": None}
 
 class QueueHandler(logging.Handler):
     def emit(self, record):
@@ -123,6 +122,7 @@ def run_video():
     # poll /api/video/status immediately without racing the thread startup.
     video_state["running"] = True
     video_state["output"] = None
+    video_state["output_path"] = None
     video_frames.start()
 
     def _run():
@@ -148,6 +148,7 @@ def run_video():
             video.detect()
             if video.output_video:
                 video_state["output"] = os.path.basename(video.output_video)
+                video_state["output_path"] = os.path.abspath(video.output_video)
                 logging.info(f"Video detection completed. Saved to: {video.output_video}")
             else:
                 logging.info("Video detection completed")
@@ -184,12 +185,11 @@ def video_status():
     return jsonify({'running': video_state["running"], 'output': video_state["output"]})
 
 
-@web_bp.route('/api/video/result/<filename>')
-def video_result(filename):
-    # guard against path traversal: only serve files directly in outputs/videos/
-    safe_name = os.path.basename(filename)
-    path = os.path.join(OUTPUT_VIDEO_DIR, safe_name)
-    if not os.path.isfile(path):
+@web_bp.route('/api/video/result')
+def video_result():
+    # serve the last completed detection's annotated video from its session log folder
+    path = video_state["output_path"]
+    if not path or not os.path.isfile(path):
         return jsonify({'error': 'Result not found'}), 404
     return send_file(path, mimetype='video/mp4')
 

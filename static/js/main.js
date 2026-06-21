@@ -325,10 +325,11 @@ async function pollVideoStatus() {
         const res = await fetch('/api/video/status');
         const data = await res.json();
         if (data.output) {
-            const url = `/api/video/result/${encodeURIComponent(data.output)}`;
+            const url = `/api/video/result?t=${Date.now()}`;
             document.getElementById('result-video').src = url;
             const dl = document.getElementById('result-download');
             dl.href = url;
+            dl.download = data.output;
             dl.textContent = `Download ${data.output}`;
             document.getElementById('result-view').classList.remove('hidden');
         }

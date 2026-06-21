@@ -138,3 +138,14 @@ def _calculate_inv_scale():
             - 3. /livestream encodes each frame, wraps it in the proper MJPEG, and yields it as a stream
             - 4. /shutdown stops picamera when the server is closed
     - Updated structure.md
+
+# 06-20-2026
+## General Updates
+    - Finalized Structure (refer to structure.md)
+    - Created a shell script to process from setup to program execution (run.sh & run.ps1)
+    - Fixed SSE Logging Failure
+    - Created a simple data storage for livestream
+    - Deployment Settings
+    - Fixed file dragging error
+    - Fixed frozen display
+        - web runs headlessly
