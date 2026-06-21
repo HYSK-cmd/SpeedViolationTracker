@@ -117,6 +117,22 @@ header h1 {
     cursor: crosshair;
 }
 
+.canvas-wrapper img,
+.canvas-wrapper video {
+    width: 100%;
+    display: block;
+}
+
+.detection-view,
+.result-view {
+    margin-top: 16px;
+}
+
+.result-view #result-download {
+    display: inline-block;
+    text-align: center;
+}
+
 .roi-inputs {
     margin-bottom: 0;
 }

@@ -102,6 +102,11 @@ async function confirmStopAndSwitch() {
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 
+// stop the browser from opening a file that's dropped anywhere outside the drop zone
+['dragover', 'drop'].forEach((evt) => {
+    window.addEventListener(evt, (e) => e.preventDefault());
+});
+
 dropZone.addEventListener('click', () => fileInput.click());
 
 dropZone.addEventListener('dragover', (e) => {
@@ -116,8 +121,10 @@ dropZone.addEventListener('dragleave', () => {
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
+    // NOTE: don't assign to fileInput.files here — it throws in some browsers (e.g.
+    // Safari) and would abort before the upload runs. uploadFile() takes the File
+    // directly, so the dropped file is all we need.
     if (e.dataTransfer.files.length) {
-        fileInput.files = e.dataTransfer.files;
         handleFile(e.dataTransfer.files[0]);
     }
 });
@@ -263,6 +270,7 @@ async function runVideo() {
     if (!uploadedFilename || !outputVideo || !model || roiPoints.length !== ROI_MAX_POINTS) return;
 
     document.getElementById('btn-run').disabled = true;
+    document.getElementById('result-view').classList.add('hidden');
 
     try {
         const res = await fetch('/api/video/run', {
@@ -276,10 +284,60 @@ async function runVideo() {
             }),
         });
         const data = await res.json();
+        if (!res.ok) {
+            appendLog(`Error: ${data.error}`);
+            document.getElementById('btn-run').disabled = false;
+            return;
+        }
         appendLog(data.message);
+
+        // show the live MJPEG preview and poll until detection finishes
+        const stream = document.getElementById('live-stream');
+        stream.src = `/api/video/stream?t=${Date.now()}`;
+        document.getElementById('detection-view').classList.remove('hidden');
+        pollVideoStatus();
     } catch (err) {
         appendLog(`Error: ${err.message}`);
+        document.getElementById('btn-run').disabled = false;
     }
+}
+
+async function pollVideoStatus() {
+    try {
+        const res = await fetch('/api/video/status');
+        const data = await res.json();
+        if (data.running) {
+            setTimeout(pollVideoStatus, 1000);
+            return;
+        }
+    } catch (err) {
+        // transient error during processing; keep polling
+        setTimeout(pollVideoStatus, 1000);
+        return;
+    }
+
+    // detection finished: stop the live preview and show the saved result
+    const stream = document.getElementById('live-stream');
+    stream.src = '';
+    document.getElementById('detection-view').classList.add('hidden');
+
+    try {
+        const res = await fetch('/api/video/status');
+        const data = await res.json();
+        if (data.output) {
+            const url = `/api/video/result/${encodeURIComponent(data.output)}`;
+            document.getElementById('result-video').src = url;
+            const dl = document.getElementById('result-download');
+            dl.href = url;
+            dl.textContent = `Download ${data.output}`;
+            document.getElementById('result-view').classList.remove('hidden');
+        }
+    } catch (err) {
+        appendLog(`Could not load result: ${err.message}`);
+    }
+
+    document.getElementById('btn-run').disabled = false;
+    checkReady();
 }
 
 // --- Livestream ROI ---

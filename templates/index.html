@@ -64,6 +64,23 @@
                 </div>
             </div>
             <button id="btn-run" class="run-btn" disabled onclick="runVideo()">Run Detection</button>
+
+            <!-- Live detection preview -->
+            <div id="detection-view" class="detection-view hidden">
+                <div class="roi-header"><span>Live detection</span></div>
+                <div class="canvas-wrapper">
+                    <img id="live-stream" alt="Live detection preview">
+                </div>
+            </div>
+
+            <!-- Finished result -->
+            <div id="result-view" class="result-view hidden">
+                <div class="roi-header"><span>Result</span></div>
+                <div class="canvas-wrapper">
+                    <video id="result-video" controls></video>
+                </div>
+                <a id="result-download" class="run-btn secondary" download>Download video</a>
+            </div>
         </section>
 
         <!-- Livestream mode -->

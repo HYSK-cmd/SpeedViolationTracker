@@ -170,6 +170,7 @@ class LiveStreamDetection(BaseDetector):
         thread.start()
 
         # main thread: display at stream FPS, overlay latest inference results
+        frame_interval = 1.0 / self.fps
         while True:
             if stop_event is not None and stop_event.is_set():
                 logging.info("Livestream stopped")
@@ -178,6 +179,11 @@ class LiveStreamDetection(BaseDetector):
             raw = grabber.read()
             if raw is None:
                 continue
+
+            # without an interactive window cv2.waitKey() no longer paces the loop,
+            # so throttle to the stream FPS to avoid a busy-spin and duplicate writes
+            if not self.display:
+                time.sleep(frame_interval)
 
             frame = cv2.resize(raw, (1280, 720))
 
@@ -205,12 +211,18 @@ class LiveStreamDetection(BaseDetector):
 
             cv2.addWeighted(box_overlay, self.alpha, frame, 1 - self.alpha, 0, frame)
 
-            cv2.imshow("video", frame)
+            # push the annotated frame to the web live stream if a sink is attached
+            if self.frame_sink is not None:
+                self.frame_sink(frame)
+
+            # preview only on the main thread (CLI); the web app runs in a worker thread
+            if self.display:
+                cv2.imshow("video", frame)
             if video_output is not None:
                 video_output.write(frame)
 
-            # stop on ESC (CLI) or when the web app signals via stop_event
-            if cv2.waitKey(1) & 0xFF == 27:
+            # stop on ESC (CLI preview) or when the web app signals via stop_event
+            if self.display and cv2.waitKey(1) & 0xFF == 27:
                 logging.info("Livestream stopped")
                 break
             if stop_event is not None and stop_event.is_set():

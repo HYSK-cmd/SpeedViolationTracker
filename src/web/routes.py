@@ -1,5 +1,6 @@
 import os
 import cv2
+import time
 import queue
 import threading
 import logging
@@ -11,6 +12,9 @@ from io import BytesIO
 
 web_bp = Blueprint('web', __name__)
 
+# where finished video-detection results are written (kept in sync with VideoDetection)
+OUTPUT_VIDEO_DIR = os.path.abspath(os.path.join("outputs", "videos"))
+
 # SSE log broadcasting
 log_queues = []
 log_lock = threading.Lock()
@@ -18,6 +22,45 @@ log_lock = threading.Lock()
 # livestream session state (only one livestream runs at a time)
 livestream_lock = threading.Lock()
 livestream_state = {"thread": None, "stop_event": None}
+
+
+class LatestFrame:
+    """Holds the most recent annotated JPEG frame for the browser MJPEG live preview."""
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._jpeg = None
+        self._active = False
+
+    def start(self):
+        with self._lock:
+            self._jpeg = None
+            self._active = True
+
+    def stop(self):
+        with self._lock:
+            self._active = False
+
+    def publish(self, frame):
+        ok, buf = cv2.imencode('.jpg', frame)
+        if not ok:
+            return
+        data = buf.tobytes()
+        with self._lock:
+            self._jpeg = data
+
+    def get(self):
+        with self._lock:
+            return self._jpeg
+
+    @property
+    def active(self):
+        with self._lock:
+            return self._active
+
+
+# live frames + status for the single active video detection
+video_frames = LatestFrame()
+video_state = {"running": False, "output": None}
 
 class QueueHandler(logging.Handler):
     def emit(self, record):
@@ -72,6 +115,16 @@ def run_video():
     if not filename or not roi_data:
         return jsonify({'error': 'Missing filename or ROI'}), 400
 
+    # only one detection at a time (it shares the single live-frame broadcaster)
+    if video_state["running"]:
+        return jsonify({'error': 'A detection is already running'}), 409
+
+    # flip state synchronously here (before the worker thread starts) so the client can
+    # poll /api/video/status immediately without racing the thread startup.
+    video_state["running"] = True
+    video_state["output"] = None
+    video_frames.start()
+
     def _run():
         from config.loader import load_settings
         from src.trapezoid_drawer import ROI
@@ -91,13 +144,54 @@ def run_video():
                 roi=roi,
                 config=config,
             )
+            video.frame_sink = video_frames.publish
             video.detect()
-            logging.info("Video detection completed")
+            if video.output_video:
+                video_state["output"] = os.path.basename(video.output_video)
+                logging.info(f"Video detection completed. Saved to: {video.output_video}")
+            else:
+                logging.info("Video detection completed")
         except Exception as e:
             logging.error(f"Detection error: {e}")
+        finally:
+            video_frames.stop()
+            video_state["running"] = False
 
     threading.Thread(target=_run, daemon=True).start()
     return jsonify({'message': 'Processing started'})
+
+
+@web_bp.route('/api/video/stream')
+def video_stream():
+    """MJPEG live preview of the running detection (multipart/x-mixed-replace)."""
+    def generate():
+        # keep the connection open until the detection signals it has stopped
+        while video_frames.active:
+            jpeg = video_frames.get()
+            if jpeg is None:
+                time.sleep(0.03)
+                continue
+            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg + b'\r\n')
+            time.sleep(0.03)
+
+    return Response(generate(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
+
+
+@web_bp.route('/api/video/status')
+def video_status():
+    return jsonify({'running': video_state["running"], 'output': video_state["output"]})
+
+
+@web_bp.route('/api/video/result/<filename>')
+def video_result(filename):
+    # guard against path traversal: only serve files directly in outputs/videos/
+    safe_name = os.path.basename(filename)
+    path = os.path.join(OUTPUT_VIDEO_DIR, safe_name)
+    if not os.path.isfile(path):
+        return jsonify({'error': 'Result not found'}), 404
+    return send_file(path, mimetype='video/mp4')
 
 
 @web_bp.route('/api/livestream/first-frame')

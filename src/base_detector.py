@@ -2,6 +2,7 @@ import os
 import cv2
 import math
 import logging
+import threading
 import numpy as np
 from ultralytics import YOLO
 from datetime import datetime
@@ -13,6 +14,16 @@ class BaseDetector:
         self.source_path = source_path
         self.model = YOLO(os.path.join("../Yolo-Models", model))
         self.output_video = None
+
+        # Live preview via cv2.imshow only works on the main thread (OpenCV HighGUI
+        # requirement; on macOS calling it from a worker thread aborts the process with a
+        # C++/NSException). The web app constructs detectors inside a Flask worker thread,
+        # so disable the preview there; the CLI runs on the main thread and keeps it.
+        self.display = threading.current_thread() is threading.main_thread()
+
+        # Optional callable(frame) used to push annotated frames somewhere other than a
+        # cv2 window (the web app sets this to stream frames to the browser as MJPEG).
+        self.frame_sink = None
 
         # video output type
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -148,14 +159,14 @@ class BaseDetector:
                 break
             yield frame
 
-    @staticmethod
     # end detection program if interrupted or finished
-    def _on_detect_end(cap: cv2.VideoCapture, video_output: cv2.VideoWriter):
+    def _on_detect_end(self, cap: cv2.VideoCapture, video_output: cv2.VideoWriter):
         if video_output is not None:
             video_output.release()
-            print("Video is successfully saved!")
+            logging.info("Video is successfully saved!")
         cap.release()
-        cv2.destroyAllWindows()
+        if self.display:
+            cv2.destroyAllWindows()
 
     # main execution: frame reading, model inference, vehicle tracking, speed estimation
     def detect(self):
@@ -168,6 +179,10 @@ class BaseDetector:
         self.frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+        # total frame count for progress logging (0 if the source can't report it)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        next_progress = 10  # log progress every ~10%
 
         # if output video exists
         video_output = None
@@ -194,6 +209,13 @@ class BaseDetector:
                 break
 
             self.frame_id += 1
+
+            # log progress so the web log panel shows activity during long videos
+            if total_frames > 0:
+                pct = self.frame_id * 100 // total_frames
+                if pct >= next_progress:
+                    logging.info(f"Processing: {pct}% ({self.frame_id}/{total_frames} frames)")
+                    next_progress += 10
 
             # keep the original frame to capture speeding vehicles' license plate
             clean_frame = frame
@@ -315,15 +337,20 @@ class BaseDetector:
             # apply semi-transparent colored overlay over roi
             cv2.addWeighted(box_overlay, self.alpha, frame, 1 - self.alpha, 0, frame)
 
-            # show each frame
-            cv2.imshow("video", frame)
+            # push the annotated frame to the web live stream if a sink is attached
+            if self.frame_sink is not None:
+                self.frame_sink(frame)
+
+            # show each frame (preview only on the main thread; see __init__)
+            if self.display:
+                cv2.imshow("video", frame)
 
             # save frame if output_video exists
             if video_output is not None:
                 video_output.write(frame)
 
-            # press ESC to stop
-            if cv2.waitKey(1) & 0xFF == 27:
+            # press ESC to stop (interactive preview only)
+            if self.display and cv2.waitKey(1) & 0xFF == 27:
                 logging.info("Program paused")
                 break
 
