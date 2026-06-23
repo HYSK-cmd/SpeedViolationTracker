@@ -6,15 +6,17 @@ End-to-end computer vision pipeline for vehicle speed violator detection from vi
 ## QUICKSTART
 ### 1) Install
 The setup scripts will automatically set up everything!
-macOS/Linux:
 ```bash
 git clone https://github.com/HYSK-cmd/SpeedViolaterDetector.git
+cd SpeedViolaterDetector
+```
+macOS/Linux:
+```bash
 ./run.sh 
 ```
 Windows PowerShell:
-```bash
-git clone https://github.com/HYSK-cmd/SpeedViolaterDetector.git
-./run.ps1
+```powershell
+.\run.ps1
 ```
 
 ### Prerequisite: YOLO Models
