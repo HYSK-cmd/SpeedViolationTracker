@@ -55,5 +55,6 @@
     ├───README.md
     ├───requirements.txt
     ├───run.sh
+    ├───run.ps1
     └───script.py
 ```
