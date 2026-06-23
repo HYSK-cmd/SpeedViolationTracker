@@ -149,3 +149,7 @@ def _calculate_inv_scale():
     - Fixed file dragging error
     - Fixed frozen display
         - web runs headlessly
+
+# 06-22-2026
+## General Updates
+    - Updated Windows PowerShell script to process from setup to program execution
